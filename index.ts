@@ -9,6 +9,7 @@ import {
   HTTPFetchError,
 } from '@line/bot-sdk';
 import express, {Application, Request, Response} from 'express';
+import 'dotenv/config'
 
 // Setup all LINE client and Express configurations.
 const clientConfig: ClientConfig = {
