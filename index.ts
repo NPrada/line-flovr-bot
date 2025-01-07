@@ -11,6 +11,7 @@ import {
 import express, {Application, Request, Response} from 'express';
 import 'dotenv/config'
 
+
 // Setup all LINE client and Express configurations.
 const clientConfig: ClientConfig = {
   channelAccessToken: process.env.CHANNEL_ACCESS_TOKEN || '',
@@ -32,7 +33,10 @@ const app: Application = express();
 // Function handler to receive the text.
 const textEventHandler = async (event: webhook.Event): Promise<MessageAPIResponseBase | undefined> => {
   // Process all variables here.
+  console.log('new event', event)
 
+  
+  
   // Check if for a text message
   if (event.type !== 'message' || event.message.type !== 'text') {
     return;
@@ -42,7 +46,7 @@ const textEventHandler = async (event: webhook.Event): Promise<MessageAPIRespons
 
   // Check if message is repliable
   if (!event.replyToken) return;
-  
+
   // Create a new message.
   // Reply to the user.
   await client.replyMessage({
@@ -52,6 +56,8 @@ const textEventHandler = async (event: webhook.Event): Promise<MessageAPIRespons
       text: event.message.text,
     }],
   });
+
+
 };
 
 // Register the LINE middleware.
