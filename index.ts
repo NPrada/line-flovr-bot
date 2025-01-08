@@ -10,7 +10,117 @@ import {
 } from "@line/bot-sdk";
 import express, { Application, Request, Response } from "express";
 import "dotenv/config";
+import { Client } from "@notionhq/client";
 
+const notionOrdersDatabaseId = "174ccfeeb33081fc9ffcc2fffa2dda4c";
+
+const notion = new Client({
+  auth: process.env.NOTION_TOKEN,
+});
+
+async function createNewDbRow(userId: string, date: Date) {
+  const res = await notion.pages.create({
+    parent: {
+      database_id: notionOrdersDatabaseId,
+    },
+    properties: {
+      UserId: {
+        title: [
+          {
+            text: {
+              content: userId,
+            },
+          },
+        ],
+      },
+      Date: {
+        date: {
+          start: date.toISOString(),
+        },
+      },
+    },
+  });
+
+  return res;
+}
+
+async function updateDbRowByUserId(
+  userId: string,
+  columnToUpdate: string,
+  newVal: string,
+) {
+  // 1. Find the page via a filter on the 'UserId' title field.
+  const userIdToFind = userId;
+  // const queryRes = await notion.databases.query({
+  //   database_id: notionOrdersDatabaseId,
+  //   filter: {
+  //     property: "UserId", // "userId" column is your title property
+  //     title: {
+  //       equals: userIdToFind,
+  //     },
+  //   },
+  // });
+  const queryRes = await notion.databases.query({
+    database_id: notionOrdersDatabaseId,
+    filter: {
+      and: [
+        {
+          property: 'UserId', // "userId" column is your title property
+          title: {
+            equals: userId,
+          },
+        },
+        {
+          property: 'Status', // "Status" is a status property
+          status: {
+            equals: 'Form not complete',
+          },
+        },
+      ],
+    },
+  });
+
+  if (queryRes.results.length === 0) {
+    console.log("No page found with that userId");
+    return;
+  }
+
+  const page = queryRes.results[0];
+  const pageId = page.id;
+
+  // 2. Update the Date property of the found page.
+  // Make sure 'Date' is indeed the name of the date property in your DB.
+  const updatedPage = await notion.pages.update({
+    page_id: pageId,
+    properties: {
+      [columnToUpdate]: {
+        rich_text: [
+          {
+            text: {
+              content: newVal,
+            },
+          },
+        ],
+      },
+    },
+  });
+
+  console.log("Updated page:", updatedPage);
+}
+
+(async () => {
+  // const res = await notion.databases.update({database_id: notionOrdersDatabaseId, properties: {
+  //   // UserId: '123'
+
+  // }})
+
+  // const res = await createNewDbRow("1234", new Date());
+  const res = await updateDbRowByUserId("1234", "User Name", "New Name")
+
+  // const res = await notion.databases.retrieve({database_id: notionOrdersDatabaseId})
+
+  console.log("res", res);
+})();
 
 // Setup all LINE client and Express configurations.
 const clientConfig: ClientConfig = {
@@ -47,8 +157,9 @@ const textEventHandler = async (
   // Check if message is repliable
   if (!event.replyToken) return;
 
-
-  const earliestDateString = formatDateToDateString(addHoursToDate(new Date(), 3))
+  const earliestDateString = formatDateToDateString(
+    addHoursToDate(new Date(), 3),
+  );
   await client.replyMessage({
     replyToken: event.replyToken,
     messages: [
@@ -130,8 +241,6 @@ app.post(
 app.listen(PORT, () => {
   console.log(`Application is live and listening on port ${PORT}`);
 });
-
-
 
 function addMonthsToDate(date: Date, months: number) {
   const newDate = new Date(date);
