@@ -14,6 +14,15 @@ import { Client } from "@notionhq/client";
 
 const notionOrdersDatabaseId = "f131d30fddd24b1faefd80fc7b430375";
 const shopPhoneNumber = "055-993-1187";
+const userState: Record<
+  string,
+  {
+    awaitingBudget?: boolean;
+    awaitingName?: boolean;
+    awaitingOrder?: boolean;
+    awaitingPhoneNumber?: boolean;
+  }
+> = {};
 
 const notion = new Client({
   auth: process.env.NOTION_TOKEN,
@@ -105,8 +114,6 @@ async function updateDbRowByUserId(
       },
     },
   });
-
-  console.log("Updated page:", updatedPage);
 }
 
 function convertQueryString(queryString: string) {
@@ -128,13 +135,13 @@ function convertQueryString(queryString: string) {
   //   // UserId: '123'
   // }})
   // const res = await createNewDbRow("1234", new Date());
-
-  console.log("hello");
-  const res = await updateDbRowByUserId(
-    "U77ba2a8cdb3cd481ddf80ade6079877b",
-    "Purpose",
-    "Item",
-  );
+  // console.log("hello");
+  // const res = await updateDbRowByUserId(
+  //   "U800cb9f6aef59899118b027cd84d468c",
+  //   "Budget",
+  //   "Item",
+  // );
+  // console.log('res')
   // const res = await notion.databases.retrieve({database_id: notionOrdersDatabaseId})
   // console.log("res", res);
 })();
@@ -163,141 +170,245 @@ const textEventHandler = async (
   // Process all variables here.
   console.log("new event", event);
   const userId = event.source.userId;
-
-  if (event.type === "postback") {
-    const postbackData = event.postback;
-
-    //SELECTED DATE RESPONSE
-    if (postbackData.data.includes("action=selectDate")) {
-      const data = convertQueryString(postbackData.data);
-      const selectedDate = postbackData.params.datetime;
-      const userId = data.userId;
-
-      const res = await createNewDbRow(userId, new Date(selectedDate));
-
-      if (!event.replyToken) return;
-
-      //SELECT Purpose
-      await client.replyMessage({
-        replyToken: event.replyToken,
-        messages: [
-          {
-            type: "text",
-            text: `${selectedDate}`,
-          },
-
-          {
-            type: "template",
-            altText: "Three-button menu",
-            template: {
-              type: "buttons",
-              title: "用途を選んでください",
-              text: "以下から選んでください。",
-              actions: [
-                {
-                  type: "postback",
-                  label: "誕生日",
-                  text: "誕生日",
-                  data: `action=purposeSelect&itemType=誕生日-birthday&userId=${userId}`,
-                },
-                {
-                  type: "postback",
-                  label: "お祝",
-                  text: "お祝",
-                  data: `action=purposeSelect&itemType=お祝-celebration&userId=${userId}`,
-                },
-                {
-                  type: "postback",
-                  label: "お供え",
-                  text: "お供え",
-                  data: `action=purposeSelect&itemType=お供え-offering&userId=${userId}`,
-                },
-                {
-                  type: "postback",
-                  label: "ご自宅用",
-                  text: "ご自宅用",
-                  data: `action=purposeSelect&itemType=ご自宅用-homeuse&userId=${userId}`,
-                },
-              ],
-            },
-          },
-        ],
-      });
-    } else if (postbackData.data.includes("action=purposeSelect")) {
-      const data = convertQueryString(postbackData.data);
-      console.log(data);
-      const itemType = data.itemType;
-      const userId = data.userId;
-      console.log(userId, "Purpose", itemType);
-      const res = await updateDbRowByUserId(userId, "Purpose", itemType);
-      console.log("updated");
-      if (!event.replyToken) return;
-
-      //SELECT COLOR
-      await client.replyMessage({
-        replyToken: event.replyToken,
-        messages: [
-          {
-            type: "template",
-            altText: "Three-button menu",
-            template: {
-              type: "buttons",
-              title: "色味を選んでください",
-              text: "以下から選んでください。",
-              actions: [
-                {
-                  type: "postback",
-                  label: "赤系",
-                  text: "赤系",
-                  data: `action=colorSelect&itemType=赤系-red&userId=${userId}`,
-                },
-                {
-                  type: "postback",
-                  label: "ピンク系",
-                  text: "ピンク系",
-                  data: `action=colorSelect&itemType=ピンク系-pink&userId=${userId}`,
-                },
-                {
-                  type: "postback",
-                  label: "黄色・オレンジ系",
-                  text: "黄色・オレンジ系",
-                  data: `action=colorSelect&itemType=黄色・オレンジ系-yellow-orange&userId=${userId}`,
-                },
-                {
-                  type: "postback",
-                  label: "ミックス",
-                  text: "ミックス",
-                  data: `action=colorSelect&itemType=ミックス-mix&userId=${userId}`,
-                },
-              ],
-            },
-          },
-        ],
-      });
-    } else if (postbackData.data.includes("action=colorSelect")) {
-      const data = convertQueryString(postbackData.data);
-      const itemType = data.itemType;
-      const userId = data.userId;
-
-      const res = await updateDbRowByUserId(userId, "Color", itemType);
-
-      if (!event.replyToken) return;
-
-      //SELECT BUDGET
-      await client.replyMessage({
-        replyToken: event.replyToken,
-        messages: [
-          {
-            type: "text",
-            text: "ご予算を入力してください。（税込み）",
-          },
-        ],
-      });
-    }
+  if (userState[userId] == null) {
+    userState[userId] = {};
   }
 
-  // Check if for a text message
+  // if (event.type === "postback") {
+  console.log("userState", userState[event.source.userId]);
+  //SELECTED DATE RESPONSE
+  if (
+    event.type === "postback" &&
+    event.postback.data.includes("action=selectDate")
+  ) {
+    const postbackData = event.postback;
+    const data = convertQueryString(postbackData.data);
+    const selectedDate = postbackData.params.datetime;
+    const userId = data.userId;
+
+    const res = await createNewDbRow(userId, new Date(selectedDate));
+
+    if (!event.replyToken) return;
+
+    //SELECT Purpose
+    await client.replyMessage({
+      replyToken: event.replyToken,
+      messages: [
+        {
+          type: "text",
+          text: `${selectedDate}`,
+        },
+
+        {
+          type: "template",
+          altText: "Three-button menu",
+          template: {
+            type: "buttons",
+            title: "用途を選んでください",
+            text: "以下から選んでください。",
+            actions: [
+              {
+                type: "postback",
+                label: "誕生日",
+                text: "誕生日",
+                data: `action=purposeSelect&itemType=誕生日-birthday&userId=${userId}`,
+              },
+              {
+                type: "postback",
+                label: "お祝",
+                text: "お祝",
+                data: `action=purposeSelect&itemType=お祝-celebration&userId=${userId}`,
+              },
+              {
+                type: "postback",
+                label: "お供え",
+                text: "お供え",
+                data: `action=purposeSelect&itemType=お供え-offering&userId=${userId}`,
+              },
+              {
+                type: "postback",
+                label: "ご自宅用",
+                text: "ご自宅用",
+                data: `action=purposeSelect&itemType=ご自宅用-homeuse&userId=${userId}`,
+              },
+            ],
+          },
+        },
+      ],
+    });
+  } else if (
+    event.type === "postback" &&
+    event.postback.data.includes("action=purposeSelect")
+  ) {
+    const data = convertQueryString(event.postback.data);
+    console.log(data);
+    const itemType = data.itemType;
+    const userId = data.userId;
+    console.log(userId, "Purpose", itemType);
+    const res = await updateDbRowByUserId(userId, "Purpose", itemType);
+    console.log("updated");
+    if (!event.replyToken) return;
+
+    //SELECT COLOR
+    await client.replyMessage({
+      replyToken: event.replyToken,
+      messages: [
+        {
+          type: "template",
+          altText: "Three-button menu",
+          template: {
+            type: "buttons",
+            title: "色味を選んでください",
+            text: "以下から選んでください。",
+            actions: [
+              {
+                type: "postback",
+                label: "赤系",
+                // text: "赤系",
+                displayText: '赤系',
+                data: `action=colorSelect&itemType=赤系-red&userId=${userId}`,
+              },
+              {
+                type: "postback",
+                label: "ピンク系",
+                // text: "ピンク系",
+                displayText: 'ピンク系',
+                data: `action=colorSelect&itemType=ピンク系-pink&userId=${userId}`,
+              },
+              {
+                type: "postback",
+                label: "黄色・オレンジ系",
+                // text: "黄色・オレンジ系",
+                displayText: '黄色・オレンジ系',
+                data: `action=colorSelect&itemType=黄色・オレンジ系-yellow-orange&userId=${userId}`,
+              },
+              {
+              
+                type: "postback",
+                label: "ミックス",
+                // text: "ミックス",
+                displayText: 'ミックス',
+                data: `action=colorSelect&itemType=ミックス-mix&userId=${userId}`,
+              },
+            ],
+          },
+        },
+      ],
+    });
+  } else if (
+    event.type === "postback" &&
+    event.postback.data.includes("action=colorSelect")
+  ) {
+    const data = convertQueryString(event.postback.data);
+    const itemType = data.itemType;
+    const userId = data.userId;
+
+    const res = await updateDbRowByUserId(userId, "Color", itemType);
+
+    if (!event.replyToken) return;
+
+    //SELECT BUDGET
+    await client.replyMessage({
+      replyToken: event.replyToken,
+      messages: [
+        {
+          type: "text",
+          text: "ご予算を入力してください。（税込み）",
+        },
+      ],
+    });
+    userState[userId].awaitingBudget = true;
+  } else if (
+    event.type === "message" &&
+    event.message.type === "text" &&
+    userState[event.source.userId].awaitingBudget &&
+    event.message.text !== "ピンク系"
+  ) {
+    //RESPONSE TO BUDGET QUESTION
+    userState[event.source.userId].awaitingBudget = false;
+    const userId = event.source.userId;
+    const budgetValue = event.message.text;
+    const res = await updateDbRowByUserId(userId, "Budget", budgetValue);
+
+    await client.replyMessage({
+      replyToken: event.replyToken,
+      messages: [
+        {
+          type: "text",
+          text: `Got it! Your budget is ${budgetValue}`,
+        },
+        //PLEASE ENTER YOUR NAME
+        {
+          type: "text",
+          text: `予約のお名前を入力してください。`,
+        },
+      ],
+    });
+
+    userState[userId].awaitingName = true;
+  } else if (
+    event.type === "message" &&
+    event.message.type === "text" &&
+    userState[event.source.userId].awaitingName
+  ) {
+    //RESPONSE TO CUSTOMER NAME QUESTION
+    userState[event.source.userId].awaitingName = false;
+    const userId = event.source.userId;
+    const customerNameValue = event.message.text;
+    const res = await updateDbRowByUserId(
+      userId,
+      "Customer Name",
+      customerNameValue,
+    );
+
+    await client.replyMessage({
+      replyToken: event.replyToken,
+      messages: [
+        {
+          type: "text",
+          text: `Got it! Your name is ${customerNameValue}`,
+        },
+        //PLEASE ENTER YOUR PHONE NUMBER
+        {
+          type: "text",
+          text: `お電話番号を入力してください。`,
+        },
+      ],
+    });
+
+    userState[userId].awaitingPhoneNumber = true;
+  } else if (
+    event.type === "message" &&
+    event.message.type === "text" &&
+    userState[event.source.userId].awaitingPhoneNumber
+  ) {
+    //RESPONSE TO PHONE NUMBER NAME QUESTION
+    userState[event.source.userId].awaitingPhoneNumber = false;
+    const userId = event.source.userId;
+    const customerNameValue = event.message.text;
+    const res = await updateDbRowByUserId(
+      userId,
+      "Phone Number",
+      customerNameValue,
+    );
+
+    await client.replyMessage({
+      replyToken: event.replyToken,
+      messages: [
+        {
+          type: "text",
+          text: `Got it! Your phone number is ${customerNameValue}`,
+        },
+        //THANK YOU FOR FILLING OUT THE ORDER
+        {
+          type: "text",
+          text: `ありがとうございます！ご注文の承認後、改めてご連絡をさせていただきますので、しばらくお待ちください！`,
+        },
+      ],
+    });
+  }
   if (event.type !== "message" || event.message.type !== "text") {
+    // Check if for a text message
     return;
   }
 
