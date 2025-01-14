@@ -387,7 +387,10 @@ const textEventHandler = async (
   }
 
   // Handle the "予約" command
-  if (event.message.text.toLowerCase().trim() === "hello") {
+  if (
+    event.message.text === "予約" ||
+        event.message.text.toLowerCase().trim() === "hello"
+  ) {
     if (!event.replyToken) return;
 
     const earliestDateString = formatDateToDateString(
