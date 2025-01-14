@@ -12,6 +12,37 @@ import express, { Application, Request, Response } from "express";
 import "dotenv/config";
 import { Client } from "@notionhq/client";
 
+const tsl = {
+  selectPurposeTitle: "用途を選んでください",
+  selectPurposeText: "以下から選んでください。",
+  birthday: "誕生日",
+  celebration: "お祝",
+  offering: "お供え",
+  homeUse: "ご自宅用",
+
+  selectColorTitle: "色味を選んでください",
+  selectColorText: "以下から選んでください。",
+  redColor: "赤系",
+  pinkColor: "ピンク系",
+  yellowOrangeColor: "黄色・オレンジ系",
+  mixedColor: "ミックス",
+
+  budgetPrompt: "ご予算を入力してください。（税込み）",
+  budgetThankYouPrefix: "ありがとうございます！ご予算は",
+  budgetThankYouSuffix: "ですね。",
+
+  nameAknowledgement: "Got it! Your name is",
+  phoneAknowledgement: "Got it! Your name is",
+
+  pleaseEnterReservationName: "予約のお名前を入力してください。",
+  pleaseEnterPhoneNumber: "お電話番号を入力してください。",
+  finalThankYou:
+    "ありがとうございます！ご注文の承認後、改めてご連絡をさせていただきますので、しばらくお待ちください！",
+
+  callIfWithin3Hours:
+    "3時間以内のご注文の場合は、{phoneNumber}までお電話ください。それ以外の方は以下より日時を選んでください。",
+};
+
 const notionOrdersDatabaseId = "f131d30fddd24b1faefd80fc7b430375";
 const shopPhoneNumber = "055-993-1187";
 const userState: Record<
@@ -59,29 +90,18 @@ async function updateDbRowByUserId(
   columnToUpdate: string,
   newVal: string,
 ) {
-  // 1. Find the page via a filter on the 'UserId' title field.
-  // const userIdToFind = userId;
-  // const queryRes = await notion.databases.query({
-  //   database_id: notionOrdersDatabaseId,
-  //   filter: {
-  //     property: "UserId", // "userId" column is your title property
-  //     title: {
-  //       equals: userIdToFind,
-  //     },
-  //   },
-  // });
   const queryRes = await notion.databases.query({
     database_id: notionOrdersDatabaseId,
     filter: {
       and: [
         {
-          property: "UserId", // "userId" column is your title property
+          property: "UserId",
           title: {
             equals: userId,
           },
         },
         {
-          property: "Status", // "Status" is a status property
+          property: "Status",
           status: {
             equals: "Form not complete",
           },
@@ -98,9 +118,7 @@ async function updateDbRowByUserId(
   const page = queryRes.results[0];
   const pageId = page.id;
 
-  // 2. Update the Date property of the found page.
-  // Make sure 'Date' is indeed the name of the date property in your DB.
-  const updatedPage = await notion.pages.update({
+  await notion.pages.update({
     page_id: pageId,
     properties: {
       [columnToUpdate]: {
@@ -117,12 +135,7 @@ async function updateDbRowByUserId(
 }
 
 function convertQueryString(queryString: string) {
-  // eg input:  queryString = 'action=selectDate&userId=U77ba2a8cdb3cd481ddf80ade6079877b';
-
-  // Use URLSearchParams to parse the string
   const params = new URLSearchParams(queryString);
-
-  // Convert to an object
   let keyValues: Record<string, string> = {};
   for (const [key, value] of params.entries()) {
     keyValues[key] = value;
@@ -131,22 +144,9 @@ function convertQueryString(queryString: string) {
 }
 
 (async () => {
-  // const res = await notion.databases.update({database_id: notionOrdersDatabaseId, properties: {
-  //   // UserId: '123'
-  // }})
-  // const res = await createNewDbRow("1234", new Date());
-  // console.log("hello");
-  // const res = await updateDbRowByUserId(
-  //   "U800cb9f6aef59899118b027cd84d468c",
-  //   "Budget",
-  //   "Item",
-  // );
-  // console.log('res')
-  // const res = await notion.databases.retrieve({database_id: notionOrdersDatabaseId})
-  // console.log("res", res);
+  // Any initialization logic you might have
 })();
 
-// Setup all LINE client and Express configurations.
 const clientConfig: ClientConfig = {
   channelAccessToken: process.env.CHANNEL_ACCESS_TOKEN || "",
 };
@@ -157,26 +157,21 @@ const middlewareConfig: MiddlewareConfig = {
 
 const PORT = process.env.PORT || 3000;
 
-// Create a new LINE SDK client.
 const client = new messagingApi.MessagingApiClient(clientConfig);
-
-// Create a new Express application.
 const app: Application = express();
 
-// Function handler to receive the text.
 const textEventHandler = async (
   event: webhook.Event,
 ): Promise<MessageAPIResponseBase | undefined> => {
-  // Process all variables here.
   console.log("new event", event);
   const userId = event.source.userId;
   if (userState[userId] == null) {
     userState[userId] = {};
   }
 
-  // if (event.type === "postback") {
   console.log("userState", userState[event.source.userId]);
-  //SELECTED DATE RESPONSE
+
+  // SELECTED DATE
   if (
     event.type === "postback" &&
     event.postback.data.includes("action=selectDate")
@@ -186,11 +181,10 @@ const textEventHandler = async (
     const selectedDate = postbackData.params.datetime;
     const userId = data.userId;
 
-    const res = await createNewDbRow(userId, new Date(selectedDate));
+    await createNewDbRow(userId, new Date(selectedDate));
 
     if (!event.replyToken) return;
 
-    //SELECT Purpose
     await client.replyMessage({
       replyToken: event.replyToken,
       messages: [
@@ -198,38 +192,37 @@ const textEventHandler = async (
           type: "text",
           text: `${selectedDate}`,
         },
-
         {
           type: "template",
           altText: "Three-button menu",
           template: {
             type: "buttons",
-            title: "用途を選んでください",
-            text: "以下から選んでください。",
+            title: tsl.selectPurposeTitle,
+            text: tsl.selectPurposeText,
             actions: [
               {
                 type: "postback",
-                label: "誕生日",
-                text: "誕生日",
-                data: `action=purposeSelect&itemType=誕生日-birthday&userId=${userId}`,
+                label: tsl.birthday,
+                displayText: tsl.birthday,
+                data: `action=purposeSelect&itemType=${tsl.birthday}-birthday&userId=${userId}`,
               },
               {
                 type: "postback",
-                label: "お祝",
-                text: "お祝",
-                data: `action=purposeSelect&itemType=お祝-celebration&userId=${userId}`,
+                label: tsl.celebration,
+                displayText: tsl.celebration,
+                data: `action=purposeSelect&itemType=${tsl.celebration}-celebration&userId=${userId}`,
               },
               {
                 type: "postback",
-                label: "お供え",
-                text: "お供え",
-                data: `action=purposeSelect&itemType=お供え-offering&userId=${userId}`,
+                label: tsl.offering,
+                displayText: tsl.offering,
+                data: `action=purposeSelect&itemType=${tsl.offering}-offering&userId=${userId}`,
               },
               {
                 type: "postback",
-                label: "ご自宅用",
-                text: "ご自宅用",
-                data: `action=purposeSelect&itemType=ご自宅用-homeuse&userId=${userId}`,
+                label: tsl.homeUse,
+                displayText: tsl.homeUse,
+                data: `action=purposeSelect&itemType=${tsl.homeUse}-homeuse&userId=${userId}`,
               },
             ],
           },
@@ -241,15 +234,13 @@ const textEventHandler = async (
     event.postback.data.includes("action=purposeSelect")
   ) {
     const data = convertQueryString(event.postback.data);
-    console.log(data);
     const itemType = data.itemType;
     const userId = data.userId;
-    console.log(userId, "Purpose", itemType);
-    const res = await updateDbRowByUserId(userId, "Purpose", itemType);
-    console.log("updated");
+
+    await updateDbRowByUserId(userId, "Purpose", itemType);
+
     if (!event.replyToken) return;
 
-    //SELECT COLOR
     await client.replyMessage({
       replyToken: event.replyToken,
       messages: [
@@ -258,37 +249,32 @@ const textEventHandler = async (
           altText: "Three-button menu",
           template: {
             type: "buttons",
-            title: "色味を選んでください",
-            text: "以下から選んでください。",
+            title: tsl.selectColorTitle,
+            text: tsl.selectColorText,
             actions: [
               {
                 type: "postback",
-                label: "赤系",
-                // text: "赤系",
-                displayText: '赤系',
-                data: `action=colorSelect&itemType=赤系-red&userId=${userId}`,
+                label: tsl.redColor,
+                displayText: tsl.redColor,
+                data: `action=colorSelect&itemType=${tsl.redColor}-red&userId=${userId}`,
               },
               {
                 type: "postback",
-                label: "ピンク系",
-                // text: "ピンク系",
-                displayText: 'ピンク系',
-                data: `action=colorSelect&itemType=ピンク系-pink&userId=${userId}`,
+                label: tsl.pinkColor,
+                displayText: tsl.pinkColor,
+                data: `action=colorSelect&itemType=${tsl.pinkColor}-pink&userId=${userId}`,
               },
               {
                 type: "postback",
-                label: "黄色・オレンジ系",
-                // text: "黄色・オレンジ系",
-                displayText: '黄色・オレンジ系',
-                data: `action=colorSelect&itemType=黄色・オレンジ系-yellow-orange&userId=${userId}`,
+                label: tsl.yellowOrangeColor,
+                displayText: tsl.yellowOrangeColor,
+                data: `action=colorSelect&itemType=${tsl.yellowOrangeColor}-yellow-orange&userId=${userId}`,
               },
               {
-              
                 type: "postback",
-                label: "ミックス",
-                // text: "ミックス",
-                displayText: 'ミックス',
-                data: `action=colorSelect&itemType=ミックス-mix&userId=${userId}`,
+                label: tsl.mixedColor,
+                displayText: tsl.mixedColor,
+                data: `action=colorSelect&itemType=${tsl.mixedColor}-mix&userId=${userId}`,
               },
             ],
           },
@@ -303,17 +289,16 @@ const textEventHandler = async (
     const itemType = data.itemType;
     const userId = data.userId;
 
-    const res = await updateDbRowByUserId(userId, "Color", itemType);
+    await updateDbRowByUserId(userId, "Color", itemType);
 
     if (!event.replyToken) return;
 
-    //SELECT BUDGET
     await client.replyMessage({
       replyToken: event.replyToken,
       messages: [
         {
           type: "text",
-          text: "ご予算を入力してください。（税込み）",
+          text: tsl.budgetPrompt,
         },
       ],
     });
@@ -322,25 +307,24 @@ const textEventHandler = async (
     event.type === "message" &&
     event.message.type === "text" &&
     userState[event.source.userId].awaitingBudget &&
-    event.message.text !== "ピンク系"
+    event.message.text !== tsl.pinkColor
   ) {
-    //RESPONSE TO BUDGET QUESTION
     userState[event.source.userId].awaitingBudget = false;
     const userId = event.source.userId;
     const budgetValue = event.message.text;
-    const res = await updateDbRowByUserId(userId, "Budget", budgetValue);
+
+    await updateDbRowByUserId(userId, "Budget", budgetValue);
 
     await client.replyMessage({
       replyToken: event.replyToken,
       messages: [
         {
           type: "text",
-          text: `Got it! Your budget is ${budgetValue}`,
+          text: `${tsl.budgetThankYouPrefix}${budgetValue}${tsl.budgetThankYouSuffix}`,
         },
-        //PLEASE ENTER YOUR NAME
         {
           type: "text",
-          text: `予約のお名前を入力してください。`,
+          text: tsl.pleaseEnterReservationName,
         },
       ],
     });
@@ -351,27 +335,22 @@ const textEventHandler = async (
     event.message.type === "text" &&
     userState[event.source.userId].awaitingName
   ) {
-    //RESPONSE TO CUSTOMER NAME QUESTION
     userState[event.source.userId].awaitingName = false;
     const userId = event.source.userId;
     const customerNameValue = event.message.text;
-    const res = await updateDbRowByUserId(
-      userId,
-      "Customer Name",
-      customerNameValue,
-    );
+
+    await updateDbRowByUserId(userId, "Customer Name", customerNameValue);
 
     await client.replyMessage({
       replyToken: event.replyToken,
       messages: [
         {
           type: "text",
-          text: `Got it! Your name is ${customerNameValue}`,
+          text: `${tsl.nameAknowledgement} ${customerNameValue}`,
         },
-        //PLEASE ENTER YOUR PHONE NUMBER
         {
           type: "text",
-          text: `お電話番号を入力してください。`,
+          text: tsl.pleaseEnterPhoneNumber,
         },
       ],
     });
@@ -382,43 +361,41 @@ const textEventHandler = async (
     event.message.type === "text" &&
     userState[event.source.userId].awaitingPhoneNumber
   ) {
-    //RESPONSE TO PHONE NUMBER NAME QUESTION
     userState[event.source.userId].awaitingPhoneNumber = false;
     const userId = event.source.userId;
     const customerNameValue = event.message.text;
-    const res = await updateDbRowByUserId(
-      userId,
-      "Phone Number",
-      customerNameValue,
-    );
+
+    await updateDbRowByUserId(userId, "Phone Number", customerNameValue);
 
     await client.replyMessage({
       replyToken: event.replyToken,
       messages: [
         {
           type: "text",
-          text: `Got it! Your phone number is ${customerNameValue}`,
+          text: `${tsl.phoneAknowledgement} ${customerNameValue}`,
         },
-        //THANK YOU FOR FILLING OUT THE ORDER
         {
           type: "text",
-          text: `ありがとうございます！ご注文の承認後、改めてご連絡をさせていただきますので、しばらくお待ちください！`,
+          text: tsl.finalThankYou,
         },
       ],
     });
   }
+
   if (event.type !== "message" || event.message.type !== "text") {
-    // Check if for a text message
     return;
   }
 
-  // Process all message related variables here.
-  if (event.message.text.toLowerCase().trim() == "hello") {
-    // Check if message is repliable
+  // Handle the "予約" command
+  if (event.message.text.toLowerCase().trim() === "hello") {
     if (!event.replyToken) return;
 
     const earliestDateString = formatDateToDateString(
       addHoursToDate(new Date(), 3),
+    );
+    const callIfWithin3Hours = tsl.callIfWithin3Hours.replace(
+      "{phoneNumber}",
+      shopPhoneNumber,
     );
 
     await client.replyMessage({
@@ -426,10 +403,10 @@ const textEventHandler = async (
       messages: [
         {
           type: "template",
-          altText: `3時間以内のご注文の場合は、${shopPhoneNumber}までお電話ください。それ以外の方は以下より日時を選んでください。`,
+          altText: callIfWithin3Hours,
           template: {
             type: "buttons",
-            text: `3時間以内のご注文の場合は、${shopPhoneNumber}までお電話ください。それ以外の方は以下より日時を選んでください。`,
+            text: callIfWithin3Hours,
             actions: [
               {
                 type: "datetimepicker",
@@ -449,11 +426,6 @@ const textEventHandler = async (
 };
 
 // Register the LINE middleware.
-// As an alternative, you could also pass the middleware in the route handler, which is what is used here.
-// app.use(middleware(middlewareConfig));
-
-// Route handler to receive webhook events.
-// This route is used to receive connection tests.
 app.get("/", async (_: Request, res: Response): Promise<Response> => {
   return res.status(200).json({
     status: "success",
@@ -461,7 +433,6 @@ app.get("/", async (_: Request, res: Response): Promise<Response> => {
   });
 });
 
-// This route is used for the Webhook.
 app.post(
   "/callback",
   middleware(middlewareConfig),
@@ -469,7 +440,6 @@ app.post(
     const callbackRequest: webhook.CallbackRequest = req.body;
     const events: webhook.Event[] = callbackRequest.events!;
 
-    // Process all the received events asynchronously.
     const results = await Promise.all(
       events.map(async (event: webhook.Event) => {
         try {
@@ -482,8 +452,6 @@ app.post(
           } else if (err instanceof Error) {
             console.error(err);
           }
-
-          // Return an error message.
           return res.status(500).json({
             status: "error",
           });
@@ -491,7 +459,6 @@ app.post(
       }),
     );
 
-    // Return a successful message.
     return res.status(200).json({
       status: "success",
       results,
@@ -499,7 +466,6 @@ app.post(
   },
 );
 
-// Create a server and listen to it.
 app.listen(PORT, () => {
   console.log(`Application is live and listening on port ${PORT}`);
 });
@@ -522,8 +488,5 @@ function formatDateToDateString(date: Date) {
   const day = String(date.getDate()).padStart(2, "0");
   const hours = String(date.getHours()).padStart(2, "0");
   const minutes = String(date.getMinutes()).padStart(2, "0");
-
-  const dateString = `${year}-${month}-${day}t${hours}:${minutes}`;
-
-  return dateString;
+  return `${year}-${month}-${day}t${hours}:${minutes}`;
 }
