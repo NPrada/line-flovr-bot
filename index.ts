@@ -11,6 +11,7 @@ import {
 import express, { Application, Request, Response } from "express";
 import "dotenv/config";
 import { Client } from "@notionhq/client";
+import { initRichMenu } from "./rich-menu.js";
 
 const tsl = {
   selectPurposeTitle: "用途を選んでください",
@@ -120,7 +121,7 @@ async function updateDbRowByUserId(
   const pageId = page.id;
 
   if (columnToUpdate === "Updated time" || columnToUpdate === "Created time") {
-    await notion.pages.update({
+    return await notion.pages.update({
       page_id: pageId,
       properties: {
         [columnToUpdate]: {
@@ -131,7 +132,7 @@ async function updateDbRowByUserId(
       },
     });
   } else if (columnToUpdate === "Status") {
-    await notion.pages.update({
+    return await notion.pages.update({
       page_id: pageId,
       properties: {
         Status: {
@@ -142,7 +143,7 @@ async function updateDbRowByUserId(
       },
     });
   } else {
-    await notion.pages.update({
+    return await notion.pages.update({
       page_id: pageId,
       properties: {
         [columnToUpdate]: {
@@ -169,7 +170,15 @@ function convertQueryString(queryString: string) {
 }
 
 (async () => {
+  const summaryString = await createOrderSummary(
+    "17d8c555-5d0f-8116-ae38-cb9837d715ed",
+  );
+
+  console.log(summaryString);
+
   // Any initialization logic you might have
+  // Call it once on startup or wherever you handle your app’s initialization
+  initRichMenu().catch(console.error);
 })();
 
 const clientConfig: ClientConfig = {
@@ -238,7 +247,6 @@ const textEventHandler = async (
     });
   }
 
-  
   // SELECTED DATE
   if (
     event.type === "postback" &&
@@ -433,7 +441,18 @@ const textEventHandler = async (
     const userId = event.source.userId;
     const customerNameValue = event.message.text;
 
-    await updateDbRowByUserId(userId, "Phone Number", customerNameValue);
+    const updated = await updateDbRowByUserId(
+      userId,
+      "Phone Number",
+      customerNameValue,
+    );
+    console.log("updated", updated);
+
+    const pageId = updated.id;
+    //'17d8c555-5d0f-8116-ae38-cb9837d715ed'
+    const summaryString = await createOrderSummary(pageId);
+
+    console.log(summaryString);
 
     await client.replyMessage({
       replyToken: event.replyToken,
@@ -447,7 +466,7 @@ const textEventHandler = async (
         },
         {
           type: "text",
-          text: tsl.finalThankYou,
+          text: summaryString,
         },
       ],
     });
@@ -455,9 +474,57 @@ const textEventHandler = async (
     await updateDbRowByUserId(userId, "Updated time", new Date().toISOString());
     await updateDbRowByUserId(userId, "Status", "Form Complete");
   }
-
-
 };
+
+/**
+ * Fetches a single order (page) from Notion by its pageId
+ * and returns a human-readable summary string.
+ */
+export async function createOrderSummary(pageId: string): Promise<string> {
+  try {
+    // 1. Retrieve the page from the Notion database
+    const page = await notion.pages.retrieve({ page_id: pageId });
+    console.log('page',page)
+    const props = (page as any).properties!;
+
+    // 2. Extract the data from each property
+    //    For rich_text, you may want to access [0]?.plain_text safely.
+    //    Adjust the property keys below to match what you have in your DB.
+
+    const userId = props["UserId"]?.title?.[0]?.plain_text || "";
+    const customerName =
+      props["Customer Name"]?.rich_text?.[0]?.plain_text || "";
+    const phoneNumber = props["Phone Number"]?.rich_text?.[0]?.plain_text || "";
+    const email = props["Email "]?.email || "";
+    const date = props["Date"]?.date?.start || "";
+    const purpose = props["Purpose"]?.rich_text?.[0]?.plain_text || "";
+    const budget = props["Budget"]?.rich_text?.[0]?.plain_text || "";
+    const color = props["Color"]?.rich_text?.[0]?.plain_text || "";
+    const orderNum = props["Order Num"]?.unique_id?.number || "";
+
+    // 3. Build a confirmation summary message
+    //    Feel free to adjust the text/format to your preference
+    const summaryMessage = `
+      ありがとう ${customerName} 様、
+
+      以下の内容でご予約（ご注文）を承りました。
+      ---------------------
+      ■ ご注文番号: ${orderNum}
+      ■ 日時: ${date}
+      ■ 目的: ${purpose}
+      ■ ご予算: ${budget}
+      ■ ご希望の色: ${color}
+      ■ 電話番号: ${phoneNumber}
+      ---------------------
+      もしご不明な点がございましたら、お気軽にご連絡くださいませ。  
+    `;
+
+    return summaryMessage.trim();
+  } catch (error) {
+    console.error("Error fetching order from Notion:", error);
+    throw error;
+  }
+}
 
 // Register the LINE middleware.
 app.get("/", async (_: Request, res: Response): Promise<Response> => {
