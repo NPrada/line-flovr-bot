@@ -31,8 +31,9 @@ const tsl = {
   budgetThankYouPrefix: "ありがとうございます！ご予算は",
   budgetThankYouSuffix: "ですね。",
 
-  nameAknowledgement: "Got it! Your name is",
-  phoneAknowledgement: "Got it! Your name is",
+  nameAknowledgement: "予約名{name}様で承りました。",
+  phoneNumberAknowledgement:
+    "ありがとうございます！お色味は{phoneNumber}ですね。",
 
   pleaseEnterReservationName: "予約のお名前を入力してください。",
   pleaseEnterPhoneNumber: "お電話番号を入力してください。",
@@ -118,20 +119,44 @@ async function updateDbRowByUserId(
   const page = queryRes.results[0];
   const pageId = page.id;
 
-  await notion.pages.update({
-    page_id: pageId,
-    properties: {
-      [columnToUpdate]: {
-        rich_text: [
-          {
-            text: {
-              content: newVal,
-            },
+  if (columnToUpdate === "Updated time" || columnToUpdate === "Created time") {
+    await notion.pages.update({
+      page_id: pageId,
+      properties: {
+        [columnToUpdate]: {
+          date: {
+            start: newVal,
           },
-        ],
+        },
       },
-    },
-  });
+    });
+  } else if (columnToUpdate === "Status") {
+    await notion.pages.update({
+      page_id: pageId,
+      properties: {
+        Status: {
+          status: {
+            name: newVal,
+          },
+        },
+      },
+    });
+  } else {
+    await notion.pages.update({
+      page_id: pageId,
+      properties: {
+        [columnToUpdate]: {
+          rich_text: [
+            {
+              text: {
+                content: newVal,
+              },
+            },
+          ],
+        },
+      },
+    });
+  }
 }
 
 function convertQueryString(queryString: string) {
@@ -169,8 +194,51 @@ const textEventHandler = async (
     userState[userId] = {};
   }
 
-  console.log("userState", userState[event.source.userId]);
+  // Handle the "予約" command
+  // PICK A DATE
+  if (
+    event.type === "message" &&
+    event.message.type === "text" &&
+    (event.message.text === "予約" ||
+      event.message.text.toLowerCase().trim() === "hello")
+  ) {
+    if (!event.replyToken) return;
 
+    const earliestDateString = formatDateToDateString(
+      addHoursToDate(new Date(), 3),
+    );
+    const callIfWithin3Hours = tsl.callIfWithin3Hours.replace(
+      "{phoneNumber}",
+      shopPhoneNumber,
+    );
+
+    await client.replyMessage({
+      replyToken: event.replyToken,
+      messages: [
+        {
+          type: "template",
+          altText: callIfWithin3Hours,
+          template: {
+            type: "buttons",
+            text: callIfWithin3Hours,
+            actions: [
+              {
+                type: "datetimepicker",
+                label: "Select date",
+                data: `action=selectDate&userId=${userId}`,
+                mode: "datetime",
+                initial: earliestDateString,
+                max: formatDateToDateString(addMonthsToDate(new Date(), 6)),
+                min: earliestDateString,
+              },
+            ],
+          },
+        },
+      ],
+    });
+  }
+
+  
   // SELECTED DATE
   if (
     event.type === "postback" &&
@@ -346,7 +414,7 @@ const textEventHandler = async (
       messages: [
         {
           type: "text",
-          text: `${tsl.nameAknowledgement} ${customerNameValue}`,
+          text: tsl.nameAknowledgement.replace("{name}", customerNameValue),
         },
         {
           type: "text",
@@ -372,7 +440,10 @@ const textEventHandler = async (
       messages: [
         {
           type: "text",
-          text: `${tsl.phoneAknowledgement} ${customerNameValue}`,
+          text: tsl.phoneNumberAknowledgement.replace(
+            "{phoneNumber}",
+            customerNameValue,
+          ),
         },
         {
           type: "text",
@@ -380,52 +451,12 @@ const textEventHandler = async (
         },
       ],
     });
+
+    await updateDbRowByUserId(userId, "Updated time", new Date().toISOString());
+    await updateDbRowByUserId(userId, "Status", "Form Complete");
   }
 
-  if (event.type !== "message" || event.message.type !== "text") {
-    return;
-  }
 
-  // Handle the "予約" command
-  if (
-    event.message.text === "予約" ||
-        event.message.text.toLowerCase().trim() === "hello"
-  ) {
-    if (!event.replyToken) return;
-
-    const earliestDateString = formatDateToDateString(
-      addHoursToDate(new Date(), 3),
-    );
-    const callIfWithin3Hours = tsl.callIfWithin3Hours.replace(
-      "{phoneNumber}",
-      shopPhoneNumber,
-    );
-
-    await client.replyMessage({
-      replyToken: event.replyToken,
-      messages: [
-        {
-          type: "template",
-          altText: callIfWithin3Hours,
-          template: {
-            type: "buttons",
-            text: callIfWithin3Hours,
-            actions: [
-              {
-                type: "datetimepicker",
-                label: "Select date",
-                data: `action=selectDate&userId=${userId}`,
-                mode: "datetime",
-                initial: earliestDateString,
-                max: formatDateToDateString(addMonthsToDate(new Date(), 6)),
-                min: earliestDateString,
-              },
-            ],
-          },
-        },
-      ],
-    });
-  }
 };
 
 // Register the LINE middleware.
