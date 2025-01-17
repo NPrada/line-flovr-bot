@@ -3,7 +3,7 @@
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = 'line-flovr-bot-dark-field-2963'
+app = 'line-flovr-bot'
 primary_region = 'nrt'
 
 [build]
