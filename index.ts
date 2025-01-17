@@ -52,6 +52,8 @@ Object.values(SHOP_CONFIGS).forEach((config) => {
       channelSecret: config.channelSecret || "",
     };
 
+    console.log('config',config)
+
     const client = new messagingApi.MessagingApiClient(clientConfig);
 
     //setup the rich menu for the specific shop

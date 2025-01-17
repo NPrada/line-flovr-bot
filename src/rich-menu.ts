@@ -14,6 +14,8 @@ const tsl = {
 
 export async function initRichMenu(client: messagingApi.MessagingApiClient, channelAccessToken: string) {
   try {
+    console.log('channelAccessToken',channelAccessToken)
+
     // Step 1: Create the rich menu
     const richMenu = await client.createRichMenu({
       size: {
@@ -39,6 +41,8 @@ export async function initRichMenu(client: messagingApi.MessagingApiClient, chan
       ],
     });
 
+    console.log('after creating rich menu')
+
     // Step 2: Load your own image
     const imagePath =  path.resolve('./images/', 'rich-menu.png');
     console.log('testPath',imagePath)
@@ -46,7 +50,7 @@ export async function initRichMenu(client: messagingApi.MessagingApiClient, chan
 
     // Optional: resize or convert the image with Sharp
     const finalImage = await sharp(imageBuffer).resize(2500, 643).toBuffer();
-
+   
     // Step 3: Upload the image using axios
     const uploadUrl = `https://api-data.line.me/v2/bot/richmenu/${richMenu.richMenuId}/content`;
     await axios.post(uploadUrl, finalImage, {
