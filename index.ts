@@ -1,4 +1,3 @@
-// Import all dependencies, mostly using destructuring for better view.
 import {
   ClientConfig,
   MessageAPIResponseBase,
@@ -10,49 +9,20 @@ import {
 } from "@line/bot-sdk";
 import express, { Application, Request, Response } from "express";
 import "dotenv/config";
-import { Client } from "@notionhq/client";
-import { initRichMenu } from "./rich-menu.js";
-
-const tsl = {
-  selectPurposeTitle: "用途を選んでください",
-  selectPurposeText: "以下から選んでください。",
-  birthday: "誕生日",
-  celebration: "お祝",
-  offering: "お供え",
-  homeUse: "ご自宅用",
-
-  selectColorTitle: "色味を選んでください",
-  selectColorText: "以下から選んでください。",
-  redColor: "赤系",
-  pinkColor: "ピンク系",
-  yellowOrangeColor: "黄色・オレンジ系",
-  mixedColor: "ミックス",
-
-  budgetPrompt: "ご予算を入力してください。（税込み）",
-  budgetThankYouPrefix: "ありがとうございます！ご予算は",
-  budgetThankYouSuffix: "ですね。",
-
-  nameAknowledgement: "予約名{name}様で承りました。",
-  phoneNumberAknowledgement:
-    "ありがとうございます！お色味は{phoneNumber}ですね。",
-
-  pleaseEnterReservationName: "予約のお名前を入力してください。",
-  pleaseEnterPhoneNumber: "お電話番号を入力してください。",
-  finalThankYou:
-    "ありがとうございます！ご注文の承認後、改めてご連絡をさせていただきますので、しばらくお待ちください！",
-
-  callIfWithin3Hours:
-    "3時間以内のご注文の場合は、{phoneNumber}までお電話ください。それ以外の方は以下より日時を選んでください。",
-};
-
-const notionOrdersDatabaseId = "f131d30fddd24b1faefd80fc7b430375";
-const shopPhoneNumber = "055-993-1187";
-
-const shopState = {
-  U93f1732cd0e7ebdb7d800f10cac3ce86: {
-    shopPhoneNumber: "055-993-1187",
-  },
-};
+import { initRichMenu } from "./src/rich-menu.js";
+import { SHOP_CONFIGS } from "./shop-configs.js";
+import {
+  createNewDbRow,
+  notion,
+  updateDbRowByUserId,
+} from "./src/notion-utilities.js";
+import { tsl } from "./src/translations.js";
+import {
+  convertQueryString,
+  addMonthsToDate,
+  addHoursToDate,
+  formatDateToDateString,
+} from "./src/utils.js";
 
 const userState: Record<
   string,
@@ -64,156 +34,79 @@ const userState: Record<
   }
 > = {};
 
-const notion = new Client({
-  auth: process.env.NOTION_TOKEN,
-});
-
-async function createNewDbRow(userId: string, date: Date, shopId, shopName) {
-  const res = await notion.pages.create({
-    parent: {
-      database_id: notionOrdersDatabaseId,
-    },
-    properties: {
-      UserId: {
-        title: [
-          {
-            text: {
-              content: userId,
-            },
-          },
-        ],
-      },
-      Date: {
-        date: {
-          start: date.toISOString(),
-        },
-      },
-      "Shop Id": {
-        rich_text: [
-          {
-            text: {
-              content: shopId,
-            },
-          },
-        ],
-      },
-      "Shop Name": {
-        rich_text: [
-          {
-            text: {
-              content: shopName,
-            },
-          },
-        ],
-      },
-    },
-  });
-
-  return res;
-}
-
-async function updateDbRowByUserId(
-  userId: string,
-  columnToUpdate: string,
-  newVal: string,
-) {
-  const queryRes = await notion.databases.query({
-    database_id: notionOrdersDatabaseId,
-    filter: {
-      and: [
-        {
-          property: "UserId",
-          title: {
-            equals: userId,
-          },
-        },
-        {
-          property: "Status",
-          status: {
-            equals: "Form not complete",
-          },
-        },
-      ],
-    },
-  });
-
-  if (queryRes.results.length === 0) {
-    console.log("No page found with that userId");
-    return;
-  }
-
-  const page = queryRes.results[0];
-  const pageId = page.id;
-
-  if (columnToUpdate === "Updated time" || columnToUpdate === "Created time") {
-    return await notion.pages.update({
-      page_id: pageId,
-      properties: {
-        [columnToUpdate]: {
-          date: {
-            start: newVal,
-          },
-        },
-      },
-    });
-  } else if (columnToUpdate === "Status") {
-    return await notion.pages.update({
-      page_id: pageId,
-      properties: {
-        Status: {
-          status: {
-            name: newVal,
-          },
-        },
-      },
-    });
-  } else {
-    return await notion.pages.update({
-      page_id: pageId,
-      properties: {
-        [columnToUpdate]: {
-          rich_text: [
-            {
-              text: {
-                content: newVal,
-              },
-            },
-          ],
-        },
-      },
-    });
-  }
-}
-
-function convertQueryString(queryString: string) {
-  const params = new URLSearchParams(queryString);
-  let keyValues: Record<string, string> = {};
-  for (const [key, value] of params.entries()) {
-    keyValues[key] = value;
-  }
-  return keyValues;
-}
-
-const clientConfig: ClientConfig = {
-  channelAccessToken: process.env.CHANNEL_ACCESS_TOKEN || "",
-};
-
-const middlewareConfig: MiddlewareConfig = {
-  channelSecret: process.env.CHANNEL_SECRET || "",
-};
-
 const PORT = process.env.PORT || 3000;
 
-const client = new messagingApi.MessagingApiClient(clientConfig);
 const app: Application = express();
 
 (async () => {
   // Any initialization logic you might have
   // Call it once on startup or wherever you handle your app’s initialization
-  initRichMenu().catch(console.error);
 })();
 
+Object.values(SHOP_CONFIGS).forEach((config) => {
+  try {
+    const clientConfig: ClientConfig = {
+      channelAccessToken: config.channelAccessToken || "",
+    };
+    const middlewareConfig: MiddlewareConfig = {
+      channelSecret: config.channelSecret || "",
+    };
+
+    const client = new messagingApi.MessagingApiClient(clientConfig);
+
+    //setup the rich menu for the specific shop
+    initRichMenu(client, config.channelAccessToken).catch(console.error);
+    //setup the webhook address for the specific shop
+    const webhookFullPath = "/callback" + config.webhookPath
+    app.post(
+      webhookFullPath,
+      middleware(middlewareConfig),
+      async (req: Request, res: Response): Promise<Response> => {
+        const callbackRequest: webhook.CallbackRequest = req.body;
+        const events: webhook.Event[] = callbackRequest.events!;
+
+        const results = await Promise.all(
+          events.map(async (event: webhook.Event) => {
+            try {
+              await textEventHandler(client, event);
+            } catch (err: unknown) {
+              if (err instanceof HTTPFetchError) {
+                console.error(err.status);
+                console.error(err.headers.get("x-line-request-id"));
+                console.error(err.body);
+              } else if (err instanceof Error) {
+                console.error(err);
+              }
+              return res.status(500).json({
+                status: "error",
+              });
+            }
+          }),
+        );
+
+        return res.status(200).json({
+          status: "success",
+          results,
+        });
+      },
+    );
+
+    console.log("setup webhook for:", webhookFullPath);
+  } catch (e) {
+    console.error("error setting up for shop: ", config.shopId, e);
+  }
+});
+
+// Register the LINE middleware.
+app.get("/", async (_: Request, res: Response): Promise<Response> => {
+  return res.status(200).json({
+    status: "success",
+    message: "Connected successfully!",
+  });
+});
+
 const textEventHandler = async (
+  client: messagingApi.MessagingApiClient,
   event: webhook.Event,
 ): Promise<MessageAPIResponseBase | undefined> => {
   console.log("new event", event);
@@ -240,7 +133,7 @@ const textEventHandler = async (
 
     const callIfWithin3Hours = tsl.callIfWithin3Hours.replace(
       "{phoneNumber}",
-      shopState[botInfo.userId].shopPhoneNumber,
+      SHOP_CONFIGS[botInfo.basicId].shopPhoneNumber,
     );
 
     await client.replyMessage({
@@ -278,13 +171,13 @@ const textEventHandler = async (
     const data = convertQueryString(postbackData.data);
     const selectedDate = postbackData.params.datetime;
     const userId = data.userId;
-    
+
     const res = await client.getBotInfo();
-    
+
     await createNewDbRow(
       userId,
       new Date(selectedDate),
-      res.userId,
+      res.basicId,
       res.displayName,
     );
 
@@ -502,6 +395,7 @@ const textEventHandler = async (
 
     await updateDbRowByUserId(userId, "Updated time", new Date().toISOString());
     await updateDbRowByUserId(userId, "Status", "Form Complete");
+    delete userState[event.source.userId]; //clear the user state so memory does not fill up
   }
 };
 
@@ -513,18 +407,18 @@ export async function createOrderSummary(pageId: string): Promise<string> {
   try {
     // 1. Retrieve the page from the Notion database
     const page = await notion.pages.retrieve({ page_id: pageId });
-    console.log("page", page);
+
     const props = (page as any).properties!;
 
     // 2. Extract the data from each property
     //    For rich_text, you may want to access [0]?.plain_text safely.
     //    Adjust the property keys below to match what you have in your DB.
 
-    const userId = props["UserId"]?.title?.[0]?.plain_text || "";
+    // const userId = props["UserId"]?.title?.[0]?.plain_text || "";
     const customerName =
       props["Customer Name"]?.rich_text?.[0]?.plain_text || "";
     const phoneNumber = props["Phone Number"]?.rich_text?.[0]?.plain_text || "";
-    const email = props["Email "]?.email || "";
+    // const email = props["Email "]?.email || "";
     const date = props["Date"]?.date?.start || "";
     const purpose = props["Purpose"]?.rich_text?.[0]?.plain_text || "";
     const budget = props["Budget"]?.rich_text?.[0]?.plain_text || "";
@@ -555,68 +449,6 @@ export async function createOrderSummary(pageId: string): Promise<string> {
   }
 }
 
-// Register the LINE middleware.
-app.get("/", async (_: Request, res: Response): Promise<Response> => {
-  return res.status(200).json({
-    status: "success",
-    message: "Connected successfully!",
-  });
-});
-
-app.post(
-  "/callback",
-  middleware(middlewareConfig),
-  async (req: Request, res: Response): Promise<Response> => {
-    const callbackRequest: webhook.CallbackRequest = req.body;
-    const events: webhook.Event[] = callbackRequest.events!;
-
-    const results = await Promise.all(
-      events.map(async (event: webhook.Event) => {
-        try {
-          await textEventHandler(event);
-        } catch (err: unknown) {
-          if (err instanceof HTTPFetchError) {
-            console.error(err.status);
-            console.error(err.headers.get("x-line-request-id"));
-            console.error(err.body);
-          } else if (err instanceof Error) {
-            console.error(err);
-          }
-          return res.status(500).json({
-            status: "error",
-          });
-        }
-      }),
-    );
-
-    return res.status(200).json({
-      status: "success",
-      results,
-    });
-  },
-);
-
 app.listen(PORT, () => {
   console.log(`Application is live and listening on port ${PORT}`);
 });
-
-function addMonthsToDate(date: Date, months: number) {
-  const newDate = new Date(date);
-  newDate.setMonth(newDate.getMonth() + months);
-  return newDate;
-}
-
-function addHoursToDate(date: Date, hours: number) {
-  const newDate = new Date(date);
-  newDate.setHours(newDate.getHours() + hours);
-  return newDate;
-}
-
-function formatDateToDateString(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  return `${year}-${month}-${day}t${hours}:${minutes}`;
-}

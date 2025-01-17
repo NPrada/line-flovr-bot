@@ -1,12 +1,6 @@
-import { ClientConfig, messagingApi } from "@line/bot-sdk";
+import { messagingApi } from "@line/bot-sdk";
 import axios from "axios";
 import sharp from "sharp";
-
-const clientConfig: ClientConfig = {
-  channelAccessToken: process.env.CHANNEL_ACCESS_TOKEN || "",
-};
-
-const client = new messagingApi.MessagingApiClient(clientConfig);
 
 const tsl = {
   placeOrder: "注文する",
@@ -25,7 +19,7 @@ async function generatePlaceholderImage() {
     .toBuffer();
 }
 
-export async function initRichMenu() {
+export async function initRichMenu(client: messagingApi.MessagingApiClient, channelAccessToken: string) {
   try {
     // Step 1: Create the rich menu
     const richMenu = await client.createRichMenu({
@@ -51,9 +45,7 @@ export async function initRichMenu() {
         },
       ],
     });
-
-    console.log("Rich menu created with ID:", richMenu.richMenuId);
-
+    
     // Step 2: Generate placeholder image
     const placeholderImage = await generatePlaceholderImage();
 
@@ -61,15 +53,16 @@ export async function initRichMenu() {
     const uploadUrl = `https://api-data.line.me/v2/bot/richmenu/${richMenu.richMenuId}/content`;
     await axios.post(uploadUrl, placeholderImage, {
       headers: {
-        Authorization: `Bearer ${clientConfig.channelAccessToken}`,
+        Authorization: `Bearer ${channelAccessToken}`,
         "Content-Type": "image/jpeg",
       },
     });
-    console.log("Rich menu placeholder image uploaded");
+    // console.log("Rich menu placeholder image uploaded");
 
     // Step 4: Set the rich menu as the default
     await client.setDefaultRichMenu(richMenu.richMenuId);
-    console.log("Rich menu set as default!");
+    
+    console.log("Rich menu created with ID:", richMenu.richMenuId);
   } catch (error) {
     console.error("Error initializing rich menu:", error);
   }

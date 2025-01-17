@@ -4,6 +4,13 @@ Welcome to this simple guide on how to create an Echo Bot for the LINE messaging
 An Echo Bot is a basic bot that replies to a user's message with the same content.
 This tutorial will help you set up a LINE Echo Bot from scratch.
 
+## How to add a new shop
+1. add the `CHANNEL SECRET` and `SHOP_ACCESS_TOKEN` to the environment variables
+2. Go into the `shop-configs.ts` file and add all of the necessary data including the environment variables we just created for the shop
+3. add the webhook url to the shops line interface the format is {ourDomainName}/webhook/{webhookPath}, the webhook path is what is set as the value in the `shop-configs.ts` file 
+4. redeploy the server
+
+
 ## Prerequisite
 
 - Node.js version 18 or higher

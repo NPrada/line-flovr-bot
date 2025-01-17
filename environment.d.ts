@@ -1,8 +1,8 @@
 declare global {
   namespace NodeJS {
     interface ProcessEnv {
-      CHANNEL_ACCESS_TOKEN: string;
-      CHANNEL_SECRET: string;
+      HANABUN_SHOP_CHANNEL_SECRET: string;
+      HANABUN_SHOP_ACCESS_TOKEN: string;
       PORT: string;
     }
   }
