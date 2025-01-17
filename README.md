@@ -1,4 +1,4 @@
-# Echo Bot for LINE using TypeScript and ESM
+# Line Flovr Chat Bot
 
 Welcome to this simple guide on how to create an Echo Bot for the LINE messaging platform using TypeScript and ECMAScript Modules (ESM).
 An Echo Bot is a basic bot that replies to a user's message with the same content.
@@ -12,24 +12,19 @@ This tutorial will help you set up a LINE Echo Bot from scratch.
 
 ## Installation
 
-- Clone the repository.
-
-```bash
-git clone https://github.com/line/line-bot-sdk-nodejs.git
-```
-
-- Change directory to this example.
-
-```bash
-cd line-bot-sdk-nodejs/examples/echo-bot-ts-esm
-```
 
 - Install all dependencies.
 
 ```bash
-npm run build-sdk
 npm install
 ```
+
+- Build and run the application
+
+```bash
+npm run start
+```
+
 
 - Set the following environment variables.
 
