@@ -57,7 +57,7 @@ Object.values(SHOP_CONFIGS).forEach((config) => {
     //setup the rich menu for the specific shop
     initRichMenu(client, config.channelAccessToken).catch(console.error);
     //setup the webhook address for the specific shop
-    const webhookFullPath = "/callback" + config.webhookPath
+    const webhookFullPath = "/webhook" + config.webhookPath
     app.post(
       webhookFullPath,
       middleware(middlewareConfig),
