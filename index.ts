@@ -47,6 +47,13 @@ const tsl = {
 
 const notionOrdersDatabaseId = "f131d30fddd24b1faefd80fc7b430375";
 const shopPhoneNumber = "055-993-1187";
+
+const shopState = {
+  U93f1732cd0e7ebdb7d800f10cac3ce86: {
+    shopPhoneNumber: "055-993-1187",
+  },
+};
+
 const userState: Record<
   string,
   {
@@ -61,7 +68,7 @@ const notion = new Client({
   auth: process.env.NOTION_TOKEN,
 });
 
-async function createNewDbRow(userId: string, date: Date) {
+async function createNewDbRow(userId: string, date: Date, shopId, shopName) {
   const res = await notion.pages.create({
     parent: {
       database_id: notionOrdersDatabaseId,
@@ -80,6 +87,24 @@ async function createNewDbRow(userId: string, date: Date) {
         date: {
           start: date.toISOString(),
         },
+      },
+      "Shop Id": {
+        rich_text: [
+          {
+            text: {
+              content: shopId,
+            },
+          },
+        ],
+      },
+      "Shop Name": {
+        rich_text: [
+          {
+            text: {
+              content: shopName,
+            },
+          },
+        ],
       },
     },
   });
@@ -169,18 +194,6 @@ function convertQueryString(queryString: string) {
   return keyValues;
 }
 
-(async () => {
-  const summaryString = await createOrderSummary(
-    "17d8c555-5d0f-8116-ae38-cb9837d715ed",
-  );
-
-  console.log(summaryString);
-
-  // Any initialization logic you might have
-  // Call it once on startup or wherever you handle your app’s initialization
-  initRichMenu().catch(console.error);
-})();
-
 const clientConfig: ClientConfig = {
   channelAccessToken: process.env.CHANNEL_ACCESS_TOKEN || "",
 };
@@ -193,6 +206,12 @@ const PORT = process.env.PORT || 3000;
 
 const client = new messagingApi.MessagingApiClient(clientConfig);
 const app: Application = express();
+
+(async () => {
+  // Any initialization logic you might have
+  // Call it once on startup or wherever you handle your app’s initialization
+  initRichMenu().catch(console.error);
+})();
 
 const textEventHandler = async (
   event: webhook.Event,
@@ -216,9 +235,12 @@ const textEventHandler = async (
     const earliestDateString = formatDateToDateString(
       addHoursToDate(new Date(), 3),
     );
+
+    const botInfo = await client.getBotInfo();
+
     const callIfWithin3Hours = tsl.callIfWithin3Hours.replace(
       "{phoneNumber}",
-      shopPhoneNumber,
+      shopState[botInfo.userId].shopPhoneNumber,
     );
 
     await client.replyMessage({
@@ -256,8 +278,15 @@ const textEventHandler = async (
     const data = convertQueryString(postbackData.data);
     const selectedDate = postbackData.params.datetime;
     const userId = data.userId;
-
-    await createNewDbRow(userId, new Date(selectedDate));
+    
+    const res = await client.getBotInfo();
+    
+    await createNewDbRow(
+      userId,
+      new Date(selectedDate),
+      res.userId,
+      res.displayName,
+    );
 
     if (!event.replyToken) return;
 
@@ -484,7 +513,7 @@ export async function createOrderSummary(pageId: string): Promise<string> {
   try {
     // 1. Retrieve the page from the Notion database
     const page = await notion.pages.retrieve({ page_id: pageId });
-    console.log('page',page)
+    console.log("page", page);
     const props = (page as any).properties!;
 
     // 2. Extract the data from each property
