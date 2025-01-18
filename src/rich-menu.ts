@@ -3,10 +3,6 @@ import axios from 'axios';
 import sharp from 'sharp';
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const tsl = {
   placeOrder: '注文する',
@@ -19,8 +15,8 @@ export async function initRichMenu(client: messagingApi.MessagingApiClient, chan
     // Step 1: Create the rich menu
     const richMenu = await client.createRichMenu({
       size: {
-        width: 2500,
-        height: 643,
+        width: 1280,
+        height: 432,
       },
       selected: false,
       name: 'Simple Order Menu',
@@ -30,8 +26,8 @@ export async function initRichMenu(client: messagingApi.MessagingApiClient, chan
           bounds: {
             x: 0,
             y: 0,
-            width: 2500,
-            height: 643,
+            width: 1280,
+            height: 432,
           },
           action: {
             type: 'message',
@@ -45,7 +41,7 @@ export async function initRichMenu(client: messagingApi.MessagingApiClient, chan
 
     // Step 2: Load your own image
     const imagePath =  path.resolve('./images/', 'rich-menu.png');
-    console.log('testPath',imagePath)
+
     const imageBuffer = fs.readFileSync(imagePath);
 
     // Optional: resize or convert the image with Sharp
