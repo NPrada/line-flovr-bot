@@ -14,7 +14,7 @@ export const SHOP_CONFIGS: Record<string, ShopConfig> = {
     shopId: "@221uygiy",
     channelSecret: process.env.HANABUN_SHOP_CHANNEL_SECRET ?? "",
     channelAccessToken: process.env.HANABUN_SHOP_ACCESS_TOKEN ?? "",
-    shopPhoneNumber: "000-1111-2222",
+    shopPhoneNumber: "055-993-1187",
     webhookPath: '/@221uygiy'
   },
   // "@2211111": {
