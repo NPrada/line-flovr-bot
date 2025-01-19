@@ -43,61 +43,66 @@ const app: Application = express();
   // Call it once on startup or wherever you handle your app’s initialization
 })();
 
-Object.values(SHOP_CONFIGS).forEach((config) => {
-  try {
-    const clientConfig: ClientConfig = {
-      channelAccessToken: config.channelAccessToken || "",
-    };
-    const middlewareConfig: MiddlewareConfig = {
-      channelSecret: config.channelSecret || "",
-    };
+(async () => {
+  // Loop over each config sequentially
+  for (const config of Object.values(SHOP_CONFIGS)) {
+    try {
+      const clientConfig: ClientConfig = {
+        channelAccessToken: config.channelAccessToken || "",
+      };
+      const middlewareConfig: MiddlewareConfig = {
+        channelSecret: config.channelSecret || "",
+      };
 
-    console.log('config',config)
+      console.log("config", config);
 
-    const client = new messagingApi.MessagingApiClient(clientConfig);
+      const client = new messagingApi.MessagingApiClient(clientConfig);
+      const botInfo = await client.getBotInfo();
 
-    //setup the rich menu for the specific shop
-    initRichMenu(client, config.channelAccessToken).catch(console.error);
-    //setup the webhook address for the specific shop
-    const webhookFullPath = "/webhook" + config.webhookPath
-    app.post(
-      webhookFullPath,
-      middleware(middlewareConfig),
-      async (req: Request, res: Response): Promise<Response> => {
-        const callbackRequest: webhook.CallbackRequest = req.body;
-        const events: webhook.Event[] = callbackRequest.events!;
+      // You can now await async calls inside the loop
+      const webhookFullPath = "/webhook" + config.webhookPath;
+      app.post(
+        webhookFullPath,
+        middleware(middlewareConfig),
+        async (req: Request, res: Response): Promise<Response> => {
+          const callbackRequest: webhook.CallbackRequest = req.body;
+          const events: webhook.Event[] = callbackRequest.events!;
 
-        const results = await Promise.all(
-          events.map(async (event: webhook.Event) => {
-            try {
-              await textEventHandler(client, event);
-            } catch (err: unknown) {
-              if (err instanceof HTTPFetchError) {
-                console.error(err.status);
-                console.error(err.headers.get("x-line-request-id"));
-                console.error(err.body);
-              } else if (err instanceof Error) {
-                console.error(err);
+          const results = await Promise.all(
+            events.map(async (event: webhook.Event) => {
+              try {
+                await textEventHandler(client, event, botInfo);
+              } catch (err: unknown) {
+                if (err instanceof HTTPFetchError) {
+                  console.error(err.status);
+                  console.error(err.headers.get("x-line-request-id"));
+                  console.error(err.body);
+                } else if (err instanceof Error) {
+                  console.error(err);
+                }
+                return res.status(500).json({
+                  status: "error",
+                });
               }
-              return res.status(500).json({
-                status: "error",
-              });
-            }
-          }),
-        );
+            }),
+          );
 
-        return res.status(200).json({
-          status: "success",
-          results,
-        });
-      },
-    );
+          return res.status(200).json({
+            status: "success",
+            results,
+          });
+        },
+      );
 
-    console.log("setup webhook for:", webhookFullPath);
-  } catch (e) {
-    console.error("error setting up for shop: ", config.shopId, e);
+      await initRichMenu(client, config.channelAccessToken);
+
+      console.log("setup webhook for:", webhookFullPath);
+    } catch (e) {
+      console.error("error setting up for shop: ", config.shopId, e);
+    }
   }
-});
+})();
+
 
 // Register the LINE middleware.
 app.get("/", async (_: Request, res: Response): Promise<Response> => {
@@ -110,6 +115,7 @@ app.get("/", async (_: Request, res: Response): Promise<Response> => {
 const textEventHandler = async (
   client: messagingApi.MessagingApiClient,
   event: webhook.Event,
+  botInfo: messagingApi.BotInfoResponse
 ): Promise<MessageAPIResponseBase | undefined> => {
   console.log("new event", event);
   const userId = event.source.userId;
@@ -130,8 +136,6 @@ const textEventHandler = async (
     const earliestDateString = formatDateToDateString(
       addHoursToDate(new Date(), 3),
     );
-
-    const botInfo = await client.getBotInfo();
 
     const callIfWithin3Hours = tsl.callIfWithin3Hours.replace(
       "{phoneNumber}",
@@ -171,30 +175,51 @@ const textEventHandler = async (
   ) {
     const postbackData = event.postback;
     const data = convertQueryString(postbackData.data);
-    const selectedDate = postbackData.params.datetime;
+    const selectedDate = postbackData.params.datetime; // e.g. "2025-01-19T14:00"
     const userId = data.userId;
-
-    const res = await client.getBotInfo();
-
+  
+    // 1) Get your bot info to figure out which shop's phone number to display
+    const shopPhoneNumber = SHOP_CONFIGS[botInfo.basicId].shopPhoneNumber;
+  
+    // 2) Create (or update) your DB row with the newly selected date
     await createNewDbRow(
       userId,
       new Date(selectedDate),
-      res.basicId,
-      res.displayName,
+      botInfo.basicId,
+      botInfo.displayName,
     );
-
+  
+    // 3) Check if the selected date/time is within 3 hours
+    const now = new Date();
+    const selectedTime = new Date(selectedDate);
+    const diffMs = selectedTime.getTime() - now.getTime();
+    const diffHours = diffMs / (1000 * 60 * 60);
+  
+    // 4) If within 3 hours, short-circuit and ask user to call
+    if (diffHours <= 3) {
+      if (!event.replyToken) return;
+  
+      await client.replyMessage({
+        replyToken: event.replyToken,
+        messages: [
+          {
+            type: "text",
+            text: tsl.dateSelectionTooSoon.replace('{shopPhoneNumber}', shopPhoneNumber),
+          },
+        ],
+      });
+      // End here so we don't continue the normal reservation flow
+      return;
+    }
+  
+    // 5) Otherwise, continue the normal flow...
     if (!event.replyToken) return;
-
     await client.replyMessage({
       replyToken: event.replyToken,
       messages: [
-        // {
-        //   type: "text",
-        //   text: `${selectedDate}`,
-        // },
         {
           type: "template",
-          altText: "Three-button menu",
+          altText: "Purpose selection menu",
           template: {
             type: "buttons",
             title: tsl.selectPurposeTitle,

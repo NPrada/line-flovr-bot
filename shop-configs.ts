@@ -6,6 +6,7 @@ export interface ShopConfig {
   channelAccessToken: string;
   shopPhoneNumber: string;
   webhookPath: `/${string}`
+  shopEmail:  `${string}@${string}`
 }
 
 export const SHOP_CONFIGS: Record<string, ShopConfig> = {
@@ -15,7 +16,8 @@ export const SHOP_CONFIGS: Record<string, ShopConfig> = {
     channelSecret: process.env.HANABUN_SHOP_CHANNEL_SECRET ?? "",
     channelAccessToken: process.env.HANABUN_SHOP_ACCESS_TOKEN ?? "",
     shopPhoneNumber: "055-993-1187",
-    webhookPath: '/@221uygiy'
+    webhookPath: '/@221uygiy',
+    shopEmail: 'niccolo.prada@gmail.com'
   },
   // "@2211111": {
   //   shopId: "@2211111",
