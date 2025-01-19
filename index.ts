@@ -188,10 +188,10 @@ const textEventHandler = async (
     await client.replyMessage({
       replyToken: event.replyToken,
       messages: [
-        {
-          type: "text",
-          text: `${selectedDate}`,
-        },
+        // {
+        //   type: "text",
+        //   text: `${selectedDate}`,
+        // },
         {
           type: "template",
           altText: "Three-button menu",
