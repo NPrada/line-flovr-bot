@@ -6,7 +6,7 @@ export const tsl = {
   offering: "お供え",
   homeUse: "ご自宅用",
 
-  dateSelectionTooSoon: `The selected time is too soon (within 3 hours). Please call the shop directly at {shopPhoneNumber}.`,
+  dateSelectionTooSoon: `3時間以内のご注文の場合は、 {shopPhoneNumber}までお電話ください。それ以外の方は以下より日時を選んでください。`,
 
   selectColorTitle: "色味を選んでください",
   selectColorText: "以下から選んでください。",

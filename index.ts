@@ -455,9 +455,9 @@ export async function createOrderSummary(pageId: string): Promise<string> {
     // 3. Build a confirmation summary message
     //    Feel free to adjust the text/format to your preference
     const summaryMessage = `
-      ありがとう ${customerName} 様、
+       ${customerName} 様、ありがとうございます。
 
-      以下の内容でご予約（ご注文）を承りました。
+      以下の内容で仮予約が完了しました。注文確定次第、花文より連絡をいたしますので、少々お待ちください。
       ---------------------
       ■ ご注文番号: ${orderNum}
       ■ 日時: ${date}
