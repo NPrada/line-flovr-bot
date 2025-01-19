@@ -189,29 +189,6 @@ const textEventHandler = async (
       botInfo.displayName,
     );
   
-    // 3) Check if the selected date/time is within 3 hours
-    const now = new Date();
-    const selectedTime = new Date(selectedDate);
-    const diffMs = selectedTime.getTime() - now.getTime();
-    const diffHours = diffMs / (1000 * 60 * 60);
-  
-    // 4) If within 3 hours, short-circuit and ask user to call
-    if (diffHours <= 3) {
-      if (!event.replyToken) return;
-  
-      await client.replyMessage({
-        replyToken: event.replyToken,
-        messages: [
-          {
-            type: "text",
-            text: tsl.dateSelectionTooSoon.replace('{shopPhoneNumber}', shopPhoneNumber),
-          },
-        ],
-      });
-      // End here so we don't continue the normal reservation flow
-      return;
-    }
-  
     // 5) Otherwise, continue the normal flow...
     if (!event.replyToken) return;
     await client.replyMessage({
