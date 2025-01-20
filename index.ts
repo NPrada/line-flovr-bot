@@ -3,7 +3,7 @@ import {
   MessageAPIResponseBase,
   messagingApi,
   middleware,
-  MiddlewareConfig,
+  MiddlewareConfig,  
   webhook,
   HTTPFetchError,
 } from "@line/bot-sdk";

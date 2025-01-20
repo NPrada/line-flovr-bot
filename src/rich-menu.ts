@@ -10,7 +10,6 @@ const tsl = {
 
 export async function initRichMenu(client: messagingApi.MessagingApiClient, channelAccessToken: string) {
   try {
-    console.log('channelAccessToken',channelAccessToken)
 
     // Step 1: Create the rich menu
     const richMenu = await client.createRichMenu({
@@ -19,7 +18,7 @@ export async function initRichMenu(client: messagingApi.MessagingApiClient, chan
         height: 432,
       },
       selected: false,
-      name: 'Simple Order Menu',
+      name: "Simple Order Menu",
       chatBarText: tsl.placeOrder,
       areas: [
         {
@@ -30,36 +29,39 @@ export async function initRichMenu(client: messagingApi.MessagingApiClient, chan
             height: 432,
           },
           action: {
-            type: 'message',
-            text: '予約',
+            type: "message",
+            text: "予約",
           },
         },
       ],
     });
 
-    console.log('after creating rich menu')
+    console.log("after creating rich menu");
 
     // Step 2: Load your own image
-    const imagePath =  path.resolve('./images/', 'rich-menu.png');
+    const imagePath = path.resolve("./images/", "rich-menu.png");
 
     const imageBuffer = fs.readFileSync(imagePath);
 
     // Optional: resize or convert the image with Sharp
-    const finalImage = await sharp(imageBuffer).resize(2500, 643).toBuffer();
-   
+    // Removes distortion by keeping the same aspect ratio
+    const finalImage = await sharp(imageBuffer)
+      .resize(1280, 432) // matching the RichMenu size
+      .toBuffer();
+
     // Step 3: Upload the image using axios
     const uploadUrl = `https://api-data.line.me/v2/bot/richmenu/${richMenu.richMenuId}/content`;
     await axios.post(uploadUrl, finalImage, {
       headers: {
         Authorization: `Bearer ${channelAccessToken}`,
-        'Content-Type': 'image/jpeg',
+        "Content-Type": "image/jpeg",
       },
     });
 
     // Step 4: Set the rich menu as the default
     await client.setDefaultRichMenu(richMenu.richMenuId);
 
-    console.log('Rich menu created with ID:', richMenu.richMenuId);
+    console.log("Rich menu created with ID:", richMenu.richMenuId);
   } catch (error) {
     console.error('Error initializing rich menu:', error);
   }
