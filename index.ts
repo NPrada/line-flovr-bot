@@ -3,7 +3,7 @@ import {
   MessageAPIResponseBase,
   messagingApi,
   middleware,
-  MiddlewareConfig,  
+  MiddlewareConfig,
   webhook,
   HTTPFetchError,
 } from "@line/bot-sdk";
@@ -40,7 +40,6 @@ const app: Application = express();
 
 (async () => {
   // Any initialization logic you might have
-  // Call it once on startup or wherever you handle your app’s initialization
 })();
 
 (async () => {
@@ -59,7 +58,7 @@ const app: Application = express();
       const client = new messagingApi.MessagingApiClient(clientConfig);
       const botInfo = await client.getBotInfo();
 
-      // You can now await async calls inside the loop
+      // Set up webhook endpoint
       const webhookFullPath = "/webhook" + config.webhookPath;
       app.post(
         webhookFullPath,
@@ -94,6 +93,7 @@ const app: Application = express();
         },
       );
 
+      // Initialize rich menu if needed
       await initRichMenu(client, config.channelAccessToken);
 
       console.log("setup webhook for:", webhookFullPath);
@@ -102,7 +102,6 @@ const app: Application = express();
     }
   }
 })();
-
 
 // Register the LINE middleware.
 app.get("/", async (_: Request, res: Response): Promise<Response> => {
@@ -123,8 +122,7 @@ const textEventHandler = async (
     userState[userId] = {};
   }
 
-  // Handle the "予約" command
-  // PICK A DATE
+  // 0) Handle the "予約" command or "hello"
   if (
     event.type === "message" &&
     event.message.type === "text" &&
@@ -168,7 +166,7 @@ const textEventHandler = async (
     });
   }
 
-  // SELECTED DATE
+  // 1) SELECTED DATE
   if (
     event.type === "postback" &&
     event.postback.data.includes("action=selectDate")
@@ -177,20 +175,63 @@ const textEventHandler = async (
     const data = convertQueryString(postbackData.data);
     const selectedDate = postbackData.params.datetime; // e.g. "2025-01-19T14:00"
     const userId = data.userId;
-  
-    // 1) Get your bot info to figure out which shop's phone number to display
-    const shopPhoneNumber = SHOP_CONFIGS[botInfo.basicId].shopPhoneNumber;
-  
-    // 2) Create (or update) your DB row with the newly selected date
+
+    // Create (or update) DB row with the newly selected date
     await createNewDbRow(
       userId,
       new Date(selectedDate),
       botInfo.basicId,
       botInfo.displayName,
     );
-  
-    // 5) Otherwise, continue the normal flow...
+
     if (!event.replyToken) return;
+
+    // Now ask for the new "Item Type" question
+    await client.replyMessage({
+      replyToken: event.replyToken,
+      messages: [
+        {
+          type: "template",
+          altText: tsl.pleaseSelectItem,
+          template: {
+            type: "buttons",
+            title: tsl.pleaseSelectItem,
+            text: tsl.pleaseSelectItem,
+            actions: [
+              {
+                type: "postback",
+                label: tsl.arrangement,
+                displayText: tsl.arrangement,
+                data: `action=itemSelect&itemVal=アレンジメント-arrangement&userId=${userId}`,
+              },
+              {
+                type: "postback",
+                label: tsl.bouquet,
+                displayText: tsl.bouquet,
+                data: `action=itemSelect&itemVal=花束-bouquet&userId=${userId}`,
+              },
+            ],
+          },
+        },
+      ],
+    });
+  }
+
+  // 2) ITEM SELECTED → Ask for PURPOSE
+  else if (
+    event.type === "postback" &&
+    event.postback.data.includes("action=itemSelect")
+  ) {
+    const data = convertQueryString(event.postback.data);
+    const selectedItem = data.itemVal;
+    const userId = data.userId;
+
+    // Store the selected item in Notion (Item Type column)
+    await updateDbRowByUserId(userId, "Item Type", selectedItem);
+
+    if (!event.replyToken) return;
+
+    // Now proceed to ask for the purpose
     await client.replyMessage({
       replyToken: event.replyToken,
       messages: [
@@ -206,49 +247,54 @@ const textEventHandler = async (
                 type: "postback",
                 label: tsl.birthday,
                 displayText: tsl.birthday,
-                data: `action=purposeSelect&itemType=${tsl.birthday}-birthday&userId=${userId}`,
+                data: `action=purposeSelect&purposeVal=${tsl.birthday}-birthday&userId=${userId}`,
               },
               {
                 type: "postback",
                 label: tsl.celebration,
                 displayText: tsl.celebration,
-                data: `action=purposeSelect&itemType=${tsl.celebration}-celebration&userId=${userId}`,
+                data: `action=purposeSelect&purposeVal=${tsl.celebration}-celebration&userId=${userId}`,
               },
               {
                 type: "postback",
                 label: tsl.offering,
                 displayText: tsl.offering,
-                data: `action=purposeSelect&itemType=${tsl.offering}-offering&userId=${userId}`,
+                data: `action=purposeSelect&purposeVal=${tsl.offering}-offering&userId=${userId}`,
               },
               {
                 type: "postback",
                 label: tsl.homeUse,
                 displayText: tsl.homeUse,
-                data: `action=purposeSelect&itemType=${tsl.homeUse}-homeuse&userId=${userId}`,
+                data: `action=purposeSelect&purposeVal=${tsl.homeUse}-homeuse&userId=${userId}`,
               },
             ],
           },
         },
       ],
     });
-  } else if (
+  }
+
+  // 3) PURPOSE SELECTED → Ask for COLOR
+  else if (
     event.type === "postback" &&
     event.postback.data.includes("action=purposeSelect")
   ) {
     const data = convertQueryString(event.postback.data);
-    const itemType = data.itemType;
+    const purposeSelected = data.purposeVal;
     const userId = data.userId;
 
-    await updateDbRowByUserId(userId, "Purpose", itemType);
+    // Store the selected purpose in Notion
+    await updateDbRowByUserId(userId, "Purpose", purposeSelected);
 
     if (!event.replyToken) return;
 
+    // Now proceed to ask for the color
     await client.replyMessage({
       replyToken: event.replyToken,
       messages: [
         {
           type: "template",
-          altText: "Three-button menu",
+          altText: tsl.selectColorText,
           template: {
             type: "buttons",
             title: tsl.selectColorTitle,
@@ -258,40 +304,43 @@ const textEventHandler = async (
                 type: "postback",
                 label: tsl.redColor,
                 displayText: tsl.redColor,
-                data: `action=colorSelect&itemType=${tsl.redColor}-red&userId=${userId}`,
+                data: `action=colorSelect&colorVal=${tsl.redColor}-red&userId=${userId}`,
               },
               {
                 type: "postback",
                 label: tsl.pinkColor,
                 displayText: tsl.pinkColor,
-                data: `action=colorSelect&itemType=${tsl.pinkColor}-pink&userId=${userId}`,
+                data: `action=colorSelect&colorVal=${tsl.pinkColor}-pink&userId=${userId}`,
               },
               {
                 type: "postback",
                 label: tsl.yellowOrangeColor,
                 displayText: tsl.yellowOrangeColor,
-                data: `action=colorSelect&itemType=${tsl.yellowOrangeColor}-yellow-orange&userId=${userId}`,
+                data: `action=colorSelect&colorVal=${tsl.yellowOrangeColor}-yellow-orange&userId=${userId}`,
               },
               {
                 type: "postback",
                 label: tsl.mixedColor,
                 displayText: tsl.mixedColor,
-                data: `action=colorSelect&itemType=${tsl.mixedColor}-mix&userId=${userId}`,
+                data: `action=colorSelect&colorVal=${tsl.mixedColor}-mix&userId=${userId}`,
               },
             ],
           },
         },
       ],
     });
-  } else if (
+  }
+
+  // 4) COLOR SELECTED → Ask for BUDGET
+  else if (
     event.type === "postback" &&
     event.postback.data.includes("action=colorSelect")
   ) {
     const data = convertQueryString(event.postback.data);
-    const itemType = data.itemType;
+    const colorSelected = data.colorVal;
     const userId = data.userId;
 
-    await updateDbRowByUserId(userId, "Color", itemType);
+    await updateDbRowByUserId(userId, "Color", colorSelected);
 
     if (!event.replyToken) return;
 
@@ -305,11 +354,13 @@ const textEventHandler = async (
       ],
     });
     userState[userId].awaitingBudget = true;
-  } else if (
+  }
+
+  // 5) BUDGET ENTERED
+  else if (
     event.type === "message" &&
     event.message.type === "text" &&
-    userState[event.source.userId].awaitingBudget &&
-    event.message.text !== tsl.pinkColor
+    userState[event.source.userId]?.awaitingBudget
   ) {
     userState[event.source.userId].awaitingBudget = false;
     const userId = event.source.userId;
@@ -332,10 +383,13 @@ const textEventHandler = async (
     });
 
     userState[userId].awaitingName = true;
-  } else if (
+  }
+
+  // 6) NAME ENTERED
+  else if (
     event.type === "message" &&
     event.message.type === "text" &&
-    userState[event.source.userId].awaitingName
+    userState[event.source.userId]?.awaitingName
   ) {
     userState[event.source.userId].awaitingName = false;
     const userId = event.source.userId;
@@ -358,24 +412,22 @@ const textEventHandler = async (
     });
 
     userState[userId].awaitingPhoneNumber = true;
-  } else if (
+  }
+
+  // 7) PHONE NUMBER ENTERED
+  else if (
     event.type === "message" &&
     event.message.type === "text" &&
-    userState[event.source.userId].awaitingPhoneNumber
+    userState[event.source.userId]?.awaitingPhoneNumber
   ) {
     userState[event.source.userId].awaitingPhoneNumber = false;
     const userId = event.source.userId;
-    const customerNameValue = event.message.text;
+    const phoneNumberValue = event.message.text;
 
-    const updated = await updateDbRowByUserId(
-      userId,
-      "Phone Number",
-      customerNameValue,
-    );
+    const updated = await updateDbRowByUserId(userId, "Phone Number", phoneNumberValue);
     console.log("updated", updated);
 
     const pageId = updated.id;
-    //'17d8c555-5d0f-8116-ae38-cb9837d715ed'
     const summaryString = await createOrderSummary(pageId);
 
     console.log(summaryString);
@@ -387,7 +439,7 @@ const textEventHandler = async (
           type: "text",
           text: tsl.phoneNumberAknowledgement.replace(
             "{phoneNumber}",
-            customerNameValue,
+            phoneNumberValue,
           ),
         },
         {
@@ -397,9 +449,10 @@ const textEventHandler = async (
       ],
     });
 
+    // Mark form complete in Notion
     await updateDbRowByUserId(userId, "Updated time", new Date().toISOString());
     await updateDbRowByUserId(userId, "Status", "Form Complete");
-    delete userState[event.source.userId]; //clear the user state so memory does not fill up
+    delete userState[event.source.userId]; // Clear user state
   }
 };
 
@@ -411,39 +464,34 @@ export async function createOrderSummary(pageId: string): Promise<string> {
   try {
     // 1. Retrieve the page from the Notion database
     const page = await notion.pages.retrieve({ page_id: pageId });
-
     const props = (page as any).properties!;
 
     // 2. Extract the data from each property
-    //    For rich_text, you may want to access [0]?.plain_text safely.
-    //    Adjust the property keys below to match what you have in your DB.
-
-    // const userId = props["UserId"]?.title?.[0]?.plain_text || "";
     const customerName =
       props["Customer Name"]?.rich_text?.[0]?.plain_text || "";
     const phoneNumber = props["Phone Number"]?.rich_text?.[0]?.plain_text || "";
-    // const email = props["Email "]?.email || "";
     const date = props["Date"]?.date?.start || "";
     const purpose = props["Purpose"]?.rich_text?.[0]?.plain_text || "";
     const budget = props["Budget"]?.rich_text?.[0]?.plain_text || "";
     const color = props["Color"]?.rich_text?.[0]?.plain_text || "";
+    const itemType = props["Item Type"]?.rich_text?.[0]?.plain_text || "";
     const orderNum = props["Order Num"]?.unique_id?.number || "";
 
     // 3. Build a confirmation summary message
-    //    Feel free to adjust the text/format to your preference
     const summaryMessage = `
-       ${customerName} 様、ありがとうございます。
+      ${customerName} 様、ありがとうございます。
 
       以下の内容で仮予約が完了しました。注文確定次第、花文より連絡をいたしますので、少々お待ちください。
       ---------------------
       ■ ご注文番号: ${orderNum}
       ■ 日時: ${date}
-      ■ 目的: ${purpose}
+      ■ 商品: ${itemType.split("-")[0]}  
+      ■ 目的: ${purpose.split("-")[0]}  
       ■ ご予算: ${budget}
-      ■ ご希望の色: ${color}
+      ■ ご希望の色: ${color.split("-")[0]}
       ■ 電話番号: ${phoneNumber}
       ---------------------
-      もしご不明な点がございましたら、お気軽にご連絡くださいませ。  
+      もしご不明な点がございましたら、お気軽にご連絡くださいませ。
     `;
 
     return summaryMessage.trim();

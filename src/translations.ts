@@ -8,6 +8,10 @@ export const tsl = {
 
   dateSelectionTooSoon: `3時間以内のご注文の場合は、 {shopPhoneNumber}までお電話ください。それ以外の方は以下より日時を選んでください。`,
 
+  pleaseSelectItem: `商品を選んでください。`,
+  arrangement: `アレンジメント`,
+  bouquet: `花束`,
+
   selectColorTitle: "色味を選んでください",
   selectColorText: "以下から選んでください。",
   redColor: "赤系",
@@ -30,4 +34,4 @@ export const tsl = {
 
   callIfWithin3Hours:
     "3時間以内のご注文の場合は、{phoneNumber}までお電話ください。それ以外の方は以下より日時を選んでください。",
-};
+} as const;
