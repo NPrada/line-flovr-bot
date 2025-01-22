@@ -196,7 +196,7 @@ const textEventHandler = async (
           template: {
             type: "buttons",
             title: tsl.pleaseSelectItem,
-            text: tsl.pleaseSelectItem,
+            text: tsl.pleaseSelectItemText,
             actions: [
               {
                 type: "postback",
