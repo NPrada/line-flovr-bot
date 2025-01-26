@@ -7,6 +7,7 @@ export interface ShopConfig {
   shopPhoneNumber: string;
   webhookPath: `/${string}`
   shopEmail:  `${string}@${string}`
+  minArrangementPrice: number
 }
 
 export const SHOP_CONFIGS: Record<string, ShopConfig> = {
@@ -17,7 +18,8 @@ export const SHOP_CONFIGS: Record<string, ShopConfig> = {
     channelAccessToken: process.env.HANABUN_SHOP_ACCESS_TOKEN ?? "",
     shopPhoneNumber: "055-993-1187",
     webhookPath: '/@221uygiy',
-    shopEmail: 'niccolo.prada@gmail.com'
+    shopEmail: 'niccolo.prada@gmail.com',
+    minArrangementPrice: 3300,
   },
   // "@2211111": {
   //   shopId: "@2211111",

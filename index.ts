@@ -10,7 +10,7 @@ import {
 import express, { Application, Request, Response } from "express";
 import "dotenv/config";
 import { initRichMenu } from "./src/rich-menu.js";
-import { SHOP_CONFIGS } from "./shop-configs.js";
+import { SHOP_CONFIGS, ShopConfig } from "./shop-configs.js";
 import {
   createNewDbRow,
   notion,
@@ -70,7 +70,7 @@ const app: Application = express();
           const results = await Promise.all(
             events.map(async (event: webhook.Event) => {
               try {
-                await textEventHandler(client, event, botInfo);
+                await textEventHandler(client, event, botInfo, config);
               } catch (err: unknown) {
                 if (err instanceof HTTPFetchError) {
                   console.error(err.status);
@@ -83,14 +83,14 @@ const app: Application = express();
                   status: "error",
                 });
               }
-            }),
+            })
           );
 
           return res.status(200).json({
             status: "success",
             results,
           });
-        },
+        }
       );
 
       // Initialize rich menu if needed
@@ -111,11 +111,12 @@ app.get("/", async (_: Request, res: Response): Promise<Response> => {
   });
 });
 
-const textEventHandler = async (
+async function textEventHandler(
   client: messagingApi.MessagingApiClient,
   event: webhook.Event,
-  botInfo: messagingApi.BotInfoResponse
-): Promise<MessageAPIResponseBase | undefined> => {
+  botInfo: messagingApi.BotInfoResponse,
+  shopConfig: ShopConfig
+): Promise<MessageAPIResponseBase | undefined> {
   console.log("new event", event);
   const userId = event.source.userId;
   if (userState[userId] == null) {
@@ -132,12 +133,12 @@ const textEventHandler = async (
     if (!event.replyToken) return;
 
     const earliestDateString = formatDateToDateString(
-      addHoursToDate(new Date(), 3),
+      addHoursToDate(new Date(), 3)
     );
 
     const callIfWithin3Hours = tsl.callIfWithin3Hours.replace(
       "{phoneNumber}",
-      SHOP_CONFIGS[botInfo.basicId].shopPhoneNumber,
+      SHOP_CONFIGS[botInfo.basicId].shopPhoneNumber
     );
 
     await client.replyMessage({
@@ -181,7 +182,7 @@ const textEventHandler = async (
       userId,
       new Date(selectedDate),
       botInfo.basicId,
-      botInfo.displayName,
+      botInfo.displayName
     );
 
     if (!event.replyToken) return;
@@ -340,7 +341,16 @@ const textEventHandler = async (
     const colorSelected = data.colorVal;
     const userId = data.userId;
 
-    await updateDbRowByUserId(userId, "Color", colorSelected);
+    // Update the color in Notion (returns the updated page object)
+    const updatedPage = await updateDbRowByUserId(
+      userId,
+      "Color",
+      colorSelected
+    );
+    console.log("updatedPage", updatedPage);
+    // Now let's see which item type they picked (arrangement vs. bouquet)
+    // by reading from Notion
+    const itemType = (updatedPage as any).properties["Item Type"]?.rich_text?.[0]?.plain_text || "";
 
     if (!event.replyToken) return;
 
@@ -349,10 +359,16 @@ const textEventHandler = async (
       messages: [
         {
           type: "text",
-          text: tsl.budgetPromptBouquet,
+          text: itemType.includes("arrangement")
+            ? tsl.budgetPromptArrangement.replace(
+                "{minPrice}",
+                String(shopConfig.minArrangementPrice)
+              )
+            : tsl.budgetPromptBouquet,
         },
       ],
     });
+
     userState[userId].awaitingBudget = true;
   }
 
@@ -442,7 +458,7 @@ const textEventHandler = async (
           type: "text",
           text: tsl.phoneNumberAknowledgement.replace(
             "{phoneNumber}",
-            phoneNumberValue,
+            phoneNumberValue
           ),
         },
         {
@@ -457,12 +473,8 @@ const textEventHandler = async (
     await updateDbRowByUserId(userId, "Status", "Form Complete");
     delete userState[event.source.userId]; // Clear user state
   }
-};
+}
 
-/**
- * Fetches a single order (page) from Notion by its pageId
- * and returns a human-readable summary string.
- */
 export async function createOrderSummary(pageId: string): Promise<string> {
   try {
     // 1. Retrieve the page from the Notion database
@@ -480,13 +492,14 @@ export async function createOrderSummary(pageId: string): Promise<string> {
     const itemType = props["Item Type"]?.rich_text?.[0]?.plain_text || "";
     const orderNum = props["Order Num"]?.unique_id?.number || "";
 
+    const tokyoTime = date.toLocaleString("ja_JP", {
+      timeZone: "Asia/Tokyo",
+    });
 
-      const tokyoTime = date.toLocaleString("ja_JP", {
-        timeZone: "Asia/Tokyo",
-      });
+    console.log(tokyoTime);
 
-      // 3. Build a confirmation summary message
-      const summaryMessage = `
+    // 3. Build a confirmation summary message
+    const summaryMessage = `
       ${customerName} 様、ありがとうございます。
 
       以下の内容で仮予約が完了しました。注文確定次第、花文より連絡をいたしますので、少々お待ちください。

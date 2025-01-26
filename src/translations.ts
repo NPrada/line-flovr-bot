@@ -9,7 +9,7 @@ export const tsl = {
   dateSelectionTooSoon: `3時間以内のご注文の場合は、 {shopPhoneNumber}までお電話ください。それ以外の方は以下より日時を選んでください。`,
 
   pleaseSelectItem: `商品を選んでください。`,
-  pleaseSelectItemText: '以下から選んでください。',
+  pleaseSelectItemText: "以下から選んでください。",
   arrangement: `アレンジメント`,
   bouquet: `花束`,
 
@@ -21,7 +21,8 @@ export const tsl = {
   mixedColor: "ミックス",
 
   budgetPromptBouquet: "ご予算を入力してください。（税込み）",
-  budgetPromptArrangement: `アレンジメントは¥{minPrice}からご注文可能です。`,
+  budgetPromptArrangement: `ご予算を入力してください。（税込み）
+  アレンジメントは¥{minPrice}からご注文可能です。`,
   budgetThankYouPrefix: "ありがとうございます！ご予算は",
   budgetThankYouSuffix: "ですね。",
 
