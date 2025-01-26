@@ -5,21 +5,23 @@ export interface ShopConfig {
   channelSecret: string;
   channelAccessToken: string;
   shopPhoneNumber: string;
-  webhookPath: `/${string}`
-  shopEmail:  `${string}@${string}`
-  minArrangementPrice: number
+  webhookPath: `/${string}`;
+  shopEmail: `${string}@${string}`;
+  minArrangementPrice: number;
+  faxNumber?: string; //OPTIONAL
 }
 
 export const SHOP_CONFIGS: Record<string, ShopConfig> = {
   //HANABUN
-  "@221uygiy": { 
+  "@221uygiy": {
     shopId: "@221uygiy",
     channelSecret: process.env.HANABUN_SHOP_CHANNEL_SECRET ?? "",
     channelAccessToken: process.env.HANABUN_SHOP_ACCESS_TOKEN ?? "",
     shopPhoneNumber: "055-993-1187",
-    webhookPath: '/@221uygiy',
-    shopEmail: 'niccolo.prada@gmail.com',
+    webhookPath: "/@221uygiy",
+    shopEmail: "niccolo.prada@gmail.com",
     minArrangementPrice: 3300,
+    faxNumber: "+61261111111", //OPTIONAL
   },
   // "@2211111": {
   //   shopId: "@2211111",

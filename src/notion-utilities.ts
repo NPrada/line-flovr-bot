@@ -1,10 +1,48 @@
 import { Client } from "@notionhq/client";
+import { OrderSummary } from "./send-confirmation.js";
 
 const notionOrdersDatabaseId = "f131d30fddd24b1faefd80fc7b430375";
 
 export const notion = new Client({
   auth: process.env.NOTION_TOKEN,
 });
+
+export async function getOrderSummary(pageId: string): Promise<OrderSummary> {
+  // 1. Retrieve the page from the Notion database
+  const page = await notion.pages.retrieve({ page_id: pageId });
+  const props = (page as any).properties!;
+
+  // 2. Extract the data from each property
+  const customerName = props["Customer Name"]?.rich_text?.[0]?.plain_text || "";
+  const phoneNumber = props["Phone Number"]?.rich_text?.[0]?.plain_text || "";
+  const date = props["Date"]?.date?.start || "";
+  const purpose = props["Purpose"]?.rich_text?.[0]?.plain_text || "";
+  const budget = props["Budget"]?.rich_text?.[0]?.plain_text || "";
+  const color = props["Color"]?.rich_text?.[0]?.plain_text || "";
+  const itemType = props["Item Type"]?.rich_text?.[0]?.plain_text || "";
+  const orderNum = props["Order Num"]?.unique_id?.number || "";
+  const created_at = props["Created time"]?.date?.start || "";
+  const placed_at = props["Updated time"]?.date?.start || "";
+
+  return {
+    customerName,
+    phoneNumber,
+    purpose,
+    budget,
+    color,
+    itemType,
+    orderNum,
+    date: date.toLocaleString("ja_JP", {
+      timeZone: "Asia/Tokyo",
+    }),
+    placed_at: placed_at.toLocaleString("ja_JP", {
+      timeZone: "Asia/Tokyo",
+    }),
+    created_at: created_at.toLocaleString("ja_JP", {
+      timeZone: "Asia/Tokyo",
+    }),
+  };
+}
 
 export async function createNewDbRow(
   userId: string,

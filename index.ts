@@ -13,16 +13,21 @@ import { initRichMenu } from "./src/rich-menu.js";
 import { SHOP_CONFIGS, ShopConfig } from "./shop-configs.js";
 import {
   createNewDbRow,
+  getOrderSummary,
   notion,
   updateDbRowByUserId,
 } from "./src/notion-utilities.js";
-import { tsl } from "./src/translations.js";
+import { createOrderSummary, tsl } from "./src/translations.js";
 import {
   convertQueryString,
   addMonthsToDate,
   addHoursToDate,
   formatDateToDateString,
 } from "./src/utils.js";
+import {
+  OrderSummary,
+  sendOrderConfirmation,
+} from "./src/send-confirmation.js";
 
 const userState: Record<
   string,
@@ -295,47 +300,166 @@ async function textEventHandler(
       messages: [
         {
           type: "template",
-          altText: tsl.selectColorText,
+          altText: "Choose an option",
           template: {
-            type: "buttons",
-            title: tsl.selectColorTitle,
-            text: tsl.selectColorText,
-            actions: [
+            type: "carousel",
+            columns: [
               {
-                type: "postback",
-                label: tsl.redColor,
-                displayText: tsl.redColor,
-                data: `action=colorSelect&colorVal=${tsl.redColor}-red&userId=${userId}`,
+                title: "Option Group 1",
+                text: "Select one:",
+                actions: [
+                  {
+                    type: "postback",
+                    label: tsl.redColor,
+                    displayText: tsl.redColor,
+                    data: `action=colorSelect&colorVal=${tsl.redColor}-red&userId=${userId}`,
+                  },
+                  {
+                    type: "postback",
+                    label: tsl.pinkColor,
+                    displayText: tsl.pinkColor,
+                    data: `action=colorSelect&colorVal=${tsl.pinkColor}-pink&userId=${userId}`,
+                  },
+                  {
+                    type: "postback",
+                    label: tsl.yellowOrangeColor,
+                    displayText: tsl.yellowOrangeColor,
+                    data: `action=colorSelect&colorVal=${tsl.yellowOrangeColor}-yellow-orange&userId=${userId}`,
+                  },
+                ],
               },
               {
-                type: "postback",
-                label: tsl.pinkColor,
-                displayText: tsl.pinkColor,
-                data: `action=colorSelect&colorVal=${tsl.pinkColor}-pink&userId=${userId}`,
-              },
-              {
-                type: "postback",
-                label: tsl.yellowOrangeColor,
-                displayText: tsl.yellowOrangeColor,
-                data: `action=colorSelect&colorVal=${tsl.yellowOrangeColor}-yellow-orange&userId=${userId}`,
-              },
-              {
-                type: "postback",
-                label: tsl.whiteColor,
-                displayText: tsl.whiteColor,
-                data: `action=colorSelect&colorVal=${tsl.whiteColor}-white&userId=${userId}`,
-              },
-              {
-                type: "postback",
-                label: tsl.mixedColor,
-                displayText: tsl.mixedColor,
-                data: `action=colorSelect&colorVal=${tsl.mixedColor}-mix&userId=${userId}`,
+                title: "Option Group 2",
+                text: "Select one:",
+                actions: [
+                  {
+                    type: "postback",
+                    label: tsl.whiteColor,
+                    displayText: tsl.whiteColor,
+                    data: `action=colorSelect&colorVal=${tsl.whiteColor}-white&userId=${userId}`,
+                  },
+                  {
+                    type: "postback",
+                    label: tsl.mixedColor,
+                    displayText: tsl.mixedColor,
+                    data: `action=colorSelect&colorVal=${tsl.mixedColor}-mix&userId=${userId}`,
+                  },
+                  {
+                    type: "postback",
+                    label: "-",
+                    displayText: "-",
+                    data: `action=colorSelect&colorVal=other&userId=${userId}`,
+                  },
+                ],
               },
             ],
           },
         },
       ],
     });
+
+    // await client.replyMessage({
+    //   replyToken: event.replyToken,
+    //   messages: [
+    //     {
+    //       type: "template",
+    //       altText: "Choose an option",
+    //       template: {
+    //         type: "carousel",
+    //         columns: [
+    //           {
+    //             title: "Option Group 1",
+    //             text: "Select one:",
+    //             actions: [
+    //               {
+    //                 type: "postback",
+    //                 label: tsl.redColor,
+    //                 displayText: tsl.redColor,
+    //                 data: `action=colorSelect&colorVal=${tsl.redColor}-red&userId=${userId}`,
+    //               },
+    //               {
+    //                 type: "postback",
+    //                 label: tsl.pinkColor,
+    //                 displayText: tsl.pinkColor,
+    //                 data: `action=colorSelect&colorVal=${tsl.pinkColor}-pink&userId=${userId}`,
+    //               },
+    //               {
+    //                 type: "postback",
+    //                 label: tsl.yellowOrangeColor,
+    //                 displayText: tsl.yellowOrangeColor,
+    //                 data: `action=colorSelect&colorVal=${tsl.yellowOrangeColor}-yellow-orange&userId=${userId}`,
+    //               },
+    //             ],
+    //           },
+    //           {
+    //             title: "Option Group 2",
+    //             text: "Select one:",
+    //             actions: [
+    //               {
+    //                 type: "postback",
+    //                 label: tsl.whiteColor,
+    //                 displayText: tsl.whiteColor,
+    //                 data: `action=colorSelect&colorVal=${tsl.whiteColor}-white&userId=${userId}`,
+    //               },
+    //               {
+    //                 type: "postback",
+    //                 label: tsl.mixedColor,
+    //                 displayText: tsl.mixedColor,
+    //                 data: `action=colorSelect&colorVal=${tsl.mixedColor}-mix&userId=${userId}`,
+    //               },
+    //               // {
+    //               //   type: "postback",
+    //               //   label: "Option 6",
+    //               //   data: "selected_option=6",
+    //               // },
+    //             ],
+    //           },
+    //         ],
+    //       },
+    //     },
+    //     // {
+    //     //   type: "template",
+    //     //   altText: tsl.selectColorText,
+    //     //   template: {
+    //     //     type: "buttons",
+    //     //     title: tsl.selectColorTitle,
+    //     //     text: tsl.selectColorText,
+    //     //     actions: [
+    //     //       {
+    //     //         type: "postback",
+    //     //         label: tsl.redColor,
+    //     //         displayText: tsl.redColor,
+    //     //         data: `action=colorSelect&colorVal=${tsl.redColor}-red&userId=${userId}`,
+    //     //       },
+    //     //       {
+    //     //         type: "postback",
+    //     //         label: tsl.pinkColor,
+    //     //         displayText: tsl.pinkColor,
+    //     //         data: `action=colorSelect&colorVal=${tsl.pinkColor}-pink&userId=${userId}`,
+    //     //       },
+    //     //       {
+    //     //         type: "postback",
+    //     //         label: tsl.yellowOrangeColor,
+    //     //         displayText: tsl.yellowOrangeColor,
+    //     //         data: `action=colorSelect&colorVal=${tsl.yellowOrangeColor}-yellow-orange&userId=${userId}`,
+    //     //       },
+    //     //       // {
+    //     //       //   type: "postback",
+    //     //       //   label: tsl.whiteColor,
+    //     //       //   displayText: tsl.whiteColor,
+    //     //       //   data: `action=colorSelect&colorVal=${tsl.whiteColor}-white&userId=${userId}`,
+    //     //       // },
+    //     //       {
+    //     //         type: "postback",
+    //     //         label: tsl.mixedColor,
+    //     //         displayText: tsl.mixedColor,
+    //     //         data: `action=colorSelect&colorVal=${tsl.mixedColor}-mix&userId=${userId}`,
+    //     //       },
+    //     //     ],
+    //     //   },
+    //     // },
+    //   ],
+    // });
   }
 
   // 4) COLOR SELECTED → Ask for BUDGET
@@ -353,10 +477,12 @@ async function textEventHandler(
       "Color",
       colorSelected
     );
-    console.log("updatedPage", updatedPage);
+
     // Now let's see which item type they picked (arrangement vs. bouquet)
     // by reading from Notion
-    const itemType = (updatedPage as any).properties["Item Type"]?.rich_text?.[0]?.plain_text || "";
+    const itemType =
+      (updatedPage as any).properties["Item Type"]?.rich_text?.[0]
+        ?.plain_text || "";
 
     if (!event.replyToken) return;
 
@@ -453,9 +579,8 @@ async function textEventHandler(
     );
 
     const pageId = updated.id;
-    const summaryString = await createOrderSummary(pageId);
-
-    console.log(summaryString);
+    const order = await getOrderSummary(pageId);
+    const summaryString = createOrderSummary(order);
 
     await client.replyMessage({
       replyToken: event.replyToken,
@@ -477,56 +602,13 @@ async function textEventHandler(
     // Mark form complete in Notion
     await updateDbRowByUserId(userId, "Updated time", new Date().toISOString());
     await updateDbRowByUserId(userId, "Status", "Form Complete");
+    await sendOrderConfirmation(order, shopConfig);
     delete userState[event.source.userId]; // Clear user state
   }
 }
 
-export async function createOrderSummary(pageId: string): Promise<string> {
-  try {
-    // 1. Retrieve the page from the Notion database
-    const page = await notion.pages.retrieve({ page_id: pageId });
-    const props = (page as any).properties!;
 
-    // 2. Extract the data from each property
-    const customerName =
-      props["Customer Name"]?.rich_text?.[0]?.plain_text || "";
-    const phoneNumber = props["Phone Number"]?.rich_text?.[0]?.plain_text || "";
-    const date = props["Date"]?.date?.start || "";
-    const purpose = props["Purpose"]?.rich_text?.[0]?.plain_text || "";
-    const budget = props["Budget"]?.rich_text?.[0]?.plain_text || "";
-    const color = props["Color"]?.rich_text?.[0]?.plain_text || "";
-    const itemType = props["Item Type"]?.rich_text?.[0]?.plain_text || "";
-    const orderNum = props["Order Num"]?.unique_id?.number || "";
 
-    const tokyoTime = date.toLocaleString("ja_JP", {
-      timeZone: "Asia/Tokyo",
-    });
-
-    console.log(tokyoTime);
-
-    // 3. Build a confirmation summary message
-    const summaryMessage = `
-      ${customerName} 様、ありがとうございます。
-
-      以下の内容で仮予約が完了しました。注文確定次第、花文より連絡をいたしますので、少々お待ちください。
-      ---------------------
-      ■ ご注文番号: ${orderNum}
-      ■ 日時: ${tokyoTime}
-      ■ 商品: ${itemType.split("-")[0]}  
-      ■ 目的: ${purpose.split("-")[0]}  
-      ■ ご予算: ${budget}
-      ■ ご希望の色: ${color.split("-")[0]}
-      ■ 電話番号: ${phoneNumber}
-      ---------------------
-      もしご不明な点がございましたら、お気軽にご連絡くださいませ。
-    `;
-
-    return summaryMessage.trim();
-  } catch (error) {
-    console.error("Error fetching order from Notion:", error);
-    throw error;
-  }
-}
 
 app.listen(PORT, () => {
   console.log(`Application is live and listening on port ${PORT}`);
