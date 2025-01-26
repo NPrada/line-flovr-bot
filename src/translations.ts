@@ -18,6 +18,7 @@ export const tsl = {
   redColor: "赤系",
   pinkColor: "ピンク系",
   yellowOrangeColor: "黄色・オレンジ系",
+  whiteColor: "白系",
   mixedColor: "ミックス",
 
   budgetPromptBouquet: "ご予算を入力してください。（税込み）",

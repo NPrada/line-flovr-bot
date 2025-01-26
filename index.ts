@@ -321,6 +321,12 @@ async function textEventHandler(
               },
               {
                 type: "postback",
+                label: tsl.whiteColor,
+                displayText: tsl.whiteColor,
+                data: `action=colorSelect&colorVal=${tsl.whiteColor}-white&userId=${userId}`,
+              },
+              {
+                type: "postback",
                 label: tsl.mixedColor,
                 displayText: tsl.mixedColor,
                 data: `action=colorSelect&colorVal=${tsl.mixedColor}-mix&userId=${userId}`,
