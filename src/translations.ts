@@ -20,7 +20,8 @@ export const tsl = {
   yellowOrangeColor: "黄色・オレンジ系",
   mixedColor: "ミックス",
 
-  budgetPrompt: "ご予算を入力してください。（税込み）",
+  budgetPromptBouquet: "ご予算を入力してください。（税込み）",
+  budgetPromptArrangement: `アレンジメントは¥{minPrice}からご注文可能です。`,
   budgetThankYouPrefix: "ありがとうございます！ご予算は",
   budgetThankYouSuffix: "ですね。",
 

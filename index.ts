@@ -349,7 +349,7 @@ const textEventHandler = async (
       messages: [
         {
           type: "text",
-          text: tsl.budgetPrompt,
+          text: tsl.budgetPromptBouquet,
         },
       ],
     });
@@ -424,8 +424,11 @@ const textEventHandler = async (
     const userId = event.source.userId;
     const phoneNumberValue = event.message.text;
 
-    const updated = await updateDbRowByUserId(userId, "Phone Number", phoneNumberValue);
-    console.log("updated", updated);
+    const updated = await updateDbRowByUserId(
+      userId,
+      "Phone Number",
+      phoneNumberValue
+    );
 
     const pageId = updated.id;
     const summaryString = await createOrderSummary(pageId);
@@ -477,14 +480,19 @@ export async function createOrderSummary(pageId: string): Promise<string> {
     const itemType = props["Item Type"]?.rich_text?.[0]?.plain_text || "";
     const orderNum = props["Order Num"]?.unique_id?.number || "";
 
-    // 3. Build a confirmation summary message
-    const summaryMessage = `
+
+      const tokyoTime = date.toLocaleString("ja_JP", {
+        timeZone: "Asia/Tokyo",
+      });
+
+      // 3. Build a confirmation summary message
+      const summaryMessage = `
       ${customerName} 様、ありがとうございます。
 
       以下の内容で仮予約が完了しました。注文確定次第、花文より連絡をいたしますので、少々お待ちください。
       ---------------------
       ■ ご注文番号: ${orderNum}
-      ■ 日時: ${date}
+      ■ 日時: ${tokyoTime}
       ■ 商品: ${itemType.split("-")[0]}  
       ■ 目的: ${purpose.split("-")[0]}  
       ■ ご予算: ${budget}
