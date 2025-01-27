@@ -16,7 +16,11 @@ import {
   getOrderSummary,
   updateDbRowByUserId,
 } from "./src/notion-utilities.js";
-import { createOrderSummary, tsl } from "./src/translations.js";
+import {
+  createOrderSummary,
+  generateWeeklySchedule,
+  tsl,
+} from "./src/translations.js";
 import {
   convertQueryString,
   addMonthsToDate,
@@ -44,7 +48,7 @@ const PORT = process.env.PORT || 3000;
 const app: Application = express();
 
 (async () => {
-  // Any initialization logic you might have
+
 })();
 
 (async () => {
@@ -189,14 +193,12 @@ async function textEventHandler(
         messages: [
           {
             type: "text",
-            text: `Sorry, we are closed at that time. Our working days are: ${shopConfig.workingDays.join(
-              ", "
-            )}. Our working hours are from ${shopConfig.openingTime} to ${
-              shopConfig.closingTime
-            }`,
+            text: `${tsl.dateSelectionOutsideWorkingHours}
+${generateWeeklySchedule(shopConfig.workingHours)}`,
           },
         ],
       });
+
       // Abort booking
       delete userState[userId];
     }
@@ -324,8 +326,8 @@ async function textEventHandler(
             type: "carousel",
             columns: [
               {
-                title: "Option Group 1",
-                text: "Select one:",
+                title: tsl.selectColorTitle,
+                text: tsl.selectColorText,
                 actions: [
                   {
                     type: "postback",
@@ -348,8 +350,8 @@ async function textEventHandler(
                 ],
               },
               {
-                title: "Option Group 2",
-                text: "Select one:",
+                title: tsl.selectColorTitle,
+                text: tsl.selectColorText,
                 actions: [
                   {
                     type: "postback",
@@ -466,10 +468,6 @@ async function textEventHandler(
       messages: [
         {
           type: "text",
-          text: tsl.nameAknowledgement.replace("{name}", customerNameValue),
-        },
-        {
-          type: "text",
           text: tsl.pleaseEnterPhoneNumber,
         },
       ],
@@ -501,13 +499,6 @@ async function textEventHandler(
     await client.replyMessage({
       replyToken: event.replyToken,
       messages: [
-        {
-          type: "text",
-          text: tsl.phoneNumberAknowledgement.replace(
-            "{phoneNumber}",
-            phoneNumberValue
-          ),
-        },
         {
           type: "text",
           text: summaryString,

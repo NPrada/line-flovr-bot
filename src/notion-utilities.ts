@@ -32,13 +32,13 @@ export async function getOrderSummary(pageId: string): Promise<OrderSummary> {
     color,
     itemType,
     orderNum,
-    date: date.toLocaleString("ja_JP", {
+    human_date: new Date(date).toLocaleString("ja-JP", {
       timeZone: "Asia/Tokyo",
     }),
-    placed_at: placed_at.toLocaleString("ja_JP", {
+    human_placed_at: new Date(placed_at).toLocaleString("ja-JP", {
       timeZone: "Asia/Tokyo",
     }),
-    created_at: created_at.toLocaleString("ja_JP", {
+    human_created_at: new Date(created_at).toLocaleString("ja-JP", {
       timeZone: "Asia/Tokyo",
     }),
   };

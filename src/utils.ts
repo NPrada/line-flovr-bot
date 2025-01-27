@@ -44,22 +44,35 @@ function getMinutesFromMidnight(date: Date): number {
 export function isDateOutsideOfWorkingHours(
   shopConfig: ShopConfig,
   selectedDate: string
-) {
+): boolean {
   const selectedDateObj = new Date(selectedDate);
   const dayOfWeek = selectedDateObj.toLocaleString("en-US", {
     weekday: "long",
   }) as Weekdays;
 
-  if (!shopConfig.workingDays.includes(dayOfWeek)) {
+  // Find the matching day in the shop’s array
+  const matchingHours = shopConfig.workingHours.find(
+    (wh) => wh.day === dayOfWeek
+  );
+
+  // If there's no match, the shop is closed that day
+  if (!matchingHours) {
     return true;
   }
 
   const selectedMinutes = getMinutesFromMidnight(selectedDateObj);
-  const openMinutes = parseTimeString(shopConfig.openingTime);
-  const closeMinutes = parseTimeString(shopConfig.closingTime);
+  const openMinutes = parseTimeString(matchingHours.openingTime);
+  const closeMinutes = parseTimeString(matchingHours.closingTime);
+
+  // Check if the time is before opening or after closing
   if (selectedMinutes < openMinutes || selectedMinutes > closeMinutes) {
     return true;
   }
 
   return false;
 }
+
+
+// function formatDateToHumanReadable(date: Date){
+//   date.
+// }

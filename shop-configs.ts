@@ -11,9 +11,11 @@ export interface ShopConfig {
   shopEmail: `${string}@${string}`;
   minArrangementPrice: number;
   faxNumber?: string; //OPTIONAL
-  openingTime: `${string}:${string}`;
-  closingTime: `${string}:${string}`;
-  workingDays: Weekdays[]
+  workingHours: {
+    day: Weekdays;
+    openingTime: `${string}:${string}`;
+    closingTime: `${string}:${string}`;
+  }[];
 }
 
 export const SHOP_CONFIGS: Record<string, ShopConfig> = {
@@ -27,9 +29,14 @@ export const SHOP_CONFIGS: Record<string, ShopConfig> = {
     shopEmail: "niccolo.prada@gmail.com",
     minArrangementPrice: 3300,
     faxNumber: "+61261111111", //OPTIONAL
-    openingTime: '09:15',
-    closingTime: "18:00",
-    workingDays: ['Monday', "Wednesday", 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    workingHours: [
+      { day: "Monday", openingTime: "09:00", closingTime: "18:00" },
+      { day: "Wednesday", openingTime: "09:00", closingTime: "18:00" },
+      { day: "Thursday", openingTime: "09:00", closingTime: "18:00" },
+      { day: "Friday", openingTime: "09:00", closingTime: "18:00" },
+      { day: "Saturday", openingTime: "09:00", closingTime: "18:00" },
+      { day: "Sunday", openingTime: "09:00", closingTime: "17:00" },
+    ],
   },
   // "@2211111": {
   //   shopId: "@2211111",

@@ -20,12 +20,12 @@ export async function sendFaxConfirmation(
   =============================================
 
   ご注文番号: ${order.orderNum}
-  注文日時: ${order.placed_at}
-  引き取り日時: ${order.date}
-  商品: ${order.itemType.split('-')[0]}
-  目的: ${order.purpose.split('-')[0]}
+  注文日時: ${order.human_placed_at}
+  引き取り日時: ${order.human_date}
+  商品: ${order.itemType.split("-")[0]}
+  目的: ${order.purpose.split("-")[0]}
   ご予算: ${order.budget}
-  ご希望の色: ${order.color.split('-')[0]}
+  ご希望の色: ${order.color.split("-")[0]}
   電話番号: ${order.phoneNumber}
 
   =============================================
@@ -36,7 +36,7 @@ export async function sendFaxConfirmation(
   const generatePdf = (text: string): Promise<string> => {
     return new Promise((resolve, reject) => {
       const doc = new PDFDocument();
-      const pdfPath = './temp-fax.pdf';
+      const pdfPath = "./temp-fax.pdf";
 
       const writeStream = fs.createWriteStream(pdfPath);
       doc.pipe(writeStream);
@@ -45,26 +45,26 @@ export async function sendFaxConfirmation(
 
       doc.end();
 
-      writeStream.on('finish', () => resolve(pdfPath));
-      writeStream.on('error', (err) => reject(err));
+      writeStream.on("finish", () => resolve(pdfPath));
+      writeStream.on("error", (err) => reject(err));
     });
   };
 
   // 3. Upload the generated PDF to ClickSend
   const uploadPdfToClickSend = async (pdfPath: string): Promise<string> => {
     const fileData = fs.createReadStream(pdfPath);
-    const url = 'https://rest.clicksend.com/v3/uploads?convert=fax';
+    const url = "https://rest.clicksend.com/v3/uploads?convert=fax";
 
     const authHeader = `Basic ${Buffer.from(
       `${CLICKSEND_USERNAME}:${CLICKSEND_API_KEY}`
-    ).toString('base64')}`;
+    ).toString("base64")}`;
 
     const response = await axios.post(
       url,
       { file: fileData },
       {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          "Content-Type": "multipart/form-data",
           Authorization: authHeader,
         },
       }
@@ -75,17 +75,18 @@ export async function sendFaxConfirmation(
 
   // 4. Send fax via ClickSend using the uploaded file URL
   const sendFax = async (fileUrl: string): Promise<void> => {
-    const url = 'https://rest.clicksend.com/v3/fax/send';
+    const url = "https://rest.clicksend.com/v3/fax/send";
 
     const authHeader = `Basic ${Buffer.from(
       `${CLICKSEND_USERNAME}:${CLICKSEND_API_KEY}`
-    ).toString('base64')}`;
+    ).toString("base64")}`;
 
     const payload = {
       file_url: fileUrl,
-      source: 'typescript',
-      from: '+61261111111',
-      to: '+61411111111',
+      source: "typescript",
+      from: "",
+      to: "+12125551234",
+      // to: '+61411111111',
       // to: shopConfig.recipientFax ?? '+61411111111', // Replace with the recipient fax number
       // from: shopConfig.senderFax ?? '+61411111111', // Replace with your sender fax number
       custom_string: order.orderNum, // Reference for tracking
@@ -93,7 +94,7 @@ export async function sendFaxConfirmation(
 
     const response = await axios.post(url, payload, {
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         Authorization: authHeader,
       },
     });

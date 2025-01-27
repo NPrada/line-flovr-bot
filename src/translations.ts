@@ -1,3 +1,4 @@
+import { ShopConfig, Weekdays } from "../shop-configs.js";
 import { OrderSummary } from "./send-confirmation.js";
 
 export const tsl = {
@@ -9,6 +10,7 @@ export const tsl = {
   homeUse: "ご自宅用",
 
   dateSelectionTooSoon: `3時間以内のご注文の場合は、 {shopPhoneNumber}までお電話ください。それ以外の方は以下より日時を選んでください。`,
+  dateSelectionOutsideWorkingHours: `申し訳ございませんが、ご選択いただいた時間は営業時間外となります。以下の曜日と時間帯でご注文を承ります。`,
 
   pleaseSelectItem: `商品を選んでください。`,
   pleaseSelectItemText: "以下から選んでください。",
@@ -42,8 +44,6 @@ export const tsl = {
     "3時間以内のご注文の場合は、{phoneNumber}までお電話ください。それ以外の方は以下より日時を選んでください。",
 } as const;
 
-
-
 export function createOrderSummary(order: OrderSummary): string {
   try {
     // 3. Build a confirmation summary message
@@ -53,7 +53,7 @@ export function createOrderSummary(order: OrderSummary): string {
       以下の内容で仮予約が完了しました。注文確定次第、花文より連絡をいたしますので、少々お待ちください。
       ---------------------
       ■ ご注文番号: ${order.orderNum}
-      ■ 日時: ${order.date}
+      ■ 日時: ${order.human_date}
       ■ 商品: ${order.itemType.split("-")[0]}  
       ■ 目的: ${order.purpose.split("-")[0]}  
       ■ ご予算: ${order.budget}
@@ -68,4 +68,40 @@ export function createOrderSummary(order: OrderSummary): string {
     console.error("Error creating order summary", error);
     throw error;
   }
+}
+
+export function generateWeeklySchedule(
+  workingHours: ShopConfig["workingHours"]
+): string {
+  const fullWeek: Weekdays[] = [
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
+  ];
+
+  const daysInJapanese: Record<Weekdays, string> = {
+    Monday: "月曜日",
+    Tuesday: "火曜日",
+    Wednesday: "水曜日",
+    Thursday: "木曜日",
+    Friday: "金曜日",
+    Saturday: "土曜日",
+    Sunday: "日曜日",
+  };
+
+  // Map all weekdays in order, filling in "定休日" for missing days
+  return fullWeek
+    .map((day) => {
+      const hours = workingHours.find((wh) => wh.day === day);
+      if (hours) {
+        return `${daysInJapanese[day]} - ${hours.openingTime}-${hours.closingTime}`;
+      } else {
+        return `${daysInJapanese[day]} - 定休日`;
+      }
+    })
+    .join("\n");
 }

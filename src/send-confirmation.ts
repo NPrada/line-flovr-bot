@@ -13,9 +13,9 @@ export interface OrderSummary {
   color: string;
   itemType: string;
   orderNum: string;
-  date: string;
-  created_at: string;
-  placed_at: string;
+  human_date: string;
+  human_created_at: string;
+  human_placed_at: string;
 }
 
 export async function sendOrderConfirmation(
@@ -33,9 +33,9 @@ async function sendEmailConfirmation(
   shopConfig: ShopConfig
 ) {
   try {
-    await resend.emails.send({
+    const res = await resend.emails.send({
       from: "Acme <onboarding@resend.dev>",
-      to: ["delivered@resend.dev", shopConfig.shopEmail],
+      to: [shopConfig.shopEmail],
       subject: "New Order: " + order.orderNum,
       html: `
       <!DOCTYPE html>
@@ -84,11 +84,11 @@ async function sendEmailConfirmation(
               </tr>
               <tr>
                 <th>注文日時</th>
-                <td>${order.placed_at}</td>
+                <td>${order.human_placed_at}</td>
               </tr>
               <tr>
                 <th>引き取り日時</th>
-                <td>${order.date}</td>
+                <td>${order.human_date}</td>
               </tr>
               <tr>
                 <th>商品</th>
@@ -117,6 +117,8 @@ async function sendEmailConfirmation(
         </html>
     `,
     });
+
+    console.log("email sent", res);
   } catch (error) {
     console.error("failed to send email confirmation", error);
   }
