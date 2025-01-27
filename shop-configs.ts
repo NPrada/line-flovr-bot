@@ -1,5 +1,7 @@
 import "dotenv/config";
 
+export type Weekdays = 'Monday' | "Tuesday" | "Wednesday"|  'Thursday'|  'Friday'|  'Saturday'|  'Sunday'
+
 export interface ShopConfig {
   shopId: string;
   channelSecret: string;
@@ -9,6 +11,9 @@ export interface ShopConfig {
   shopEmail: `${string}@${string}`;
   minArrangementPrice: number;
   faxNumber?: string; //OPTIONAL
+  openingTime: `${string}:${string}`;
+  closingTime: `${string}:${string}`;
+  workingDays: Weekdays[]
 }
 
 export const SHOP_CONFIGS: Record<string, ShopConfig> = {
@@ -22,6 +27,9 @@ export const SHOP_CONFIGS: Record<string, ShopConfig> = {
     shopEmail: "niccolo.prada@gmail.com",
     minArrangementPrice: 3300,
     faxNumber: "+61261111111", //OPTIONAL
+    openingTime: '09:15',
+    closingTime: "18:00",
+    workingDays: ['Monday', "Wednesday", 'Thursday', 'Friday', 'Saturday', 'Sunday']
   },
   // "@2211111": {
   //   shopId: "@2211111",

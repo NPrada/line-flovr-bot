@@ -10,11 +10,10 @@ import {
 import express, { Application, Request, Response } from "express";
 import "dotenv/config";
 import { initRichMenu } from "./src/rich-menu.js";
-import { SHOP_CONFIGS, ShopConfig } from "./shop-configs.js";
+import { SHOP_CONFIGS, ShopConfig, Weekdays } from "./shop-configs.js";
 import {
   createNewDbRow,
   getOrderSummary,
-  notion,
   updateDbRowByUserId,
 } from "./src/notion-utilities.js";
 import { createOrderSummary, tsl } from "./src/translations.js";
@@ -23,6 +22,7 @@ import {
   addMonthsToDate,
   addHoursToDate,
   formatDateToDateString,
+  isDateOutsideOfWorkingHours,
 } from "./src/utils.js";
 import {
   OrderSummary,
@@ -181,6 +181,25 @@ async function textEventHandler(
     const data = convertQueryString(postbackData.data);
     const selectedDate = postbackData.params.datetime; // e.g. "2025-01-19T14:00"
     const userId = data.userId;
+
+    if (isDateOutsideOfWorkingHours(shopConfig, selectedDate)) {
+      if (!event.replyToken) return;
+      await client.replyMessage({
+        replyToken: event.replyToken,
+        messages: [
+          {
+            type: "text",
+            text: `Sorry, we are closed at that time. Our working days are: ${shopConfig.workingDays.join(
+              ", "
+            )}. Our working hours are from ${shopConfig.openingTime} to ${
+              shopConfig.closingTime
+            }`,
+          },
+        ],
+      });
+      // Abort booking
+      delete userState[userId];
+    }
 
     // Create (or update) DB row with the newly selected date
     await createNewDbRow(
@@ -357,109 +376,6 @@ async function textEventHandler(
         },
       ],
     });
-
-    // await client.replyMessage({
-    //   replyToken: event.replyToken,
-    //   messages: [
-    //     {
-    //       type: "template",
-    //       altText: "Choose an option",
-    //       template: {
-    //         type: "carousel",
-    //         columns: [
-    //           {
-    //             title: "Option Group 1",
-    //             text: "Select one:",
-    //             actions: [
-    //               {
-    //                 type: "postback",
-    //                 label: tsl.redColor,
-    //                 displayText: tsl.redColor,
-    //                 data: `action=colorSelect&colorVal=${tsl.redColor}-red&userId=${userId}`,
-    //               },
-    //               {
-    //                 type: "postback",
-    //                 label: tsl.pinkColor,
-    //                 displayText: tsl.pinkColor,
-    //                 data: `action=colorSelect&colorVal=${tsl.pinkColor}-pink&userId=${userId}`,
-    //               },
-    //               {
-    //                 type: "postback",
-    //                 label: tsl.yellowOrangeColor,
-    //                 displayText: tsl.yellowOrangeColor,
-    //                 data: `action=colorSelect&colorVal=${tsl.yellowOrangeColor}-yellow-orange&userId=${userId}`,
-    //               },
-    //             ],
-    //           },
-    //           {
-    //             title: "Option Group 2",
-    //             text: "Select one:",
-    //             actions: [
-    //               {
-    //                 type: "postback",
-    //                 label: tsl.whiteColor,
-    //                 displayText: tsl.whiteColor,
-    //                 data: `action=colorSelect&colorVal=${tsl.whiteColor}-white&userId=${userId}`,
-    //               },
-    //               {
-    //                 type: "postback",
-    //                 label: tsl.mixedColor,
-    //                 displayText: tsl.mixedColor,
-    //                 data: `action=colorSelect&colorVal=${tsl.mixedColor}-mix&userId=${userId}`,
-    //               },
-    //               // {
-    //               //   type: "postback",
-    //               //   label: "Option 6",
-    //               //   data: "selected_option=6",
-    //               // },
-    //             ],
-    //           },
-    //         ],
-    //       },
-    //     },
-    //     // {
-    //     //   type: "template",
-    //     //   altText: tsl.selectColorText,
-    //     //   template: {
-    //     //     type: "buttons",
-    //     //     title: tsl.selectColorTitle,
-    //     //     text: tsl.selectColorText,
-    //     //     actions: [
-    //     //       {
-    //     //         type: "postback",
-    //     //         label: tsl.redColor,
-    //     //         displayText: tsl.redColor,
-    //     //         data: `action=colorSelect&colorVal=${tsl.redColor}-red&userId=${userId}`,
-    //     //       },
-    //     //       {
-    //     //         type: "postback",
-    //     //         label: tsl.pinkColor,
-    //     //         displayText: tsl.pinkColor,
-    //     //         data: `action=colorSelect&colorVal=${tsl.pinkColor}-pink&userId=${userId}`,
-    //     //       },
-    //     //       {
-    //     //         type: "postback",
-    //     //         label: tsl.yellowOrangeColor,
-    //     //         displayText: tsl.yellowOrangeColor,
-    //     //         data: `action=colorSelect&colorVal=${tsl.yellowOrangeColor}-yellow-orange&userId=${userId}`,
-    //     //       },
-    //     //       // {
-    //     //       //   type: "postback",
-    //     //       //   label: tsl.whiteColor,
-    //     //       //   displayText: tsl.whiteColor,
-    //     //       //   data: `action=colorSelect&colorVal=${tsl.whiteColor}-white&userId=${userId}`,
-    //     //       // },
-    //     //       {
-    //     //         type: "postback",
-    //     //         label: tsl.mixedColor,
-    //     //         displayText: tsl.mixedColor,
-    //     //         data: `action=colorSelect&colorVal=${tsl.mixedColor}-mix&userId=${userId}`,
-    //     //       },
-    //     //     ],
-    //     //   },
-    //     // },
-    //   ],
-    // });
   }
 
   // 4) COLOR SELECTED → Ask for BUDGET
@@ -607,9 +523,7 @@ async function textEventHandler(
   }
 }
 
-
-
-
 app.listen(PORT, () => {
   console.log(`Application is live and listening on port ${PORT}`);
 });
+
