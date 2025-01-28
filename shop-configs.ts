@@ -26,9 +26,9 @@ export const SHOP_CONFIGS: Record<string, ShopConfig> = {
     channelAccessToken: process.env.HANABUN_SHOP_ACCESS_TOKEN ?? "",
     shopPhoneNumber: "055-993-1187",
     webhookPath: "/@221uygiy",
-    shopEmail: "niccolo.prada@gmail.com",
+    shopEmail: "niccolo.prada@gmail.com", //mail@hanabun.co.jp
     minArrangementPrice: 3300,
-    faxNumber: "+61261111111", //OPTIONAL
+    faxNumber: "055-993-0507", //OPTIONAL
     workingHours: [
       { day: "Monday", openingTime: "09:00", closingTime: "18:00" },
       { day: "Wednesday", openingTime: "09:00", closingTime: "18:00" },

@@ -32,6 +32,7 @@ import {
   OrderSummary,
   sendOrderConfirmation,
 } from "./src/send-confirmation.js";
+import { buildConfirmationLineMessage } from "./src/flex-messages/confirmation-message.js";
 
 const userState: Record<
   string,
@@ -47,9 +48,7 @@ const PORT = process.env.PORT || 3000;
 
 const app: Application = express();
 
-(async () => {
-
-})();
+(async () => {})();
 
 (async () => {
   // Loop over each config sequentially
@@ -212,7 +211,18 @@ ${generateWeeklySchedule(shopConfig.workingHours)}`,
     );
 
     if (!event.replyToken) return;
-
+    console.log('fake order', {
+      budget: '3300',
+      color: 'asdsa',
+      customerName: 'asdasd',
+      human_created_at: new Date().toISOString(),
+      human_date:  new Date().toISOString(),
+      human_placed_at:  new Date().toISOString(),
+       itemType: 'asdad',
+       orderNum: '12',
+       phoneNumber: '213123',
+       purpose: 'asdasd'
+    })
     // Now ask for the new "Item Type" question
     await client.replyMessage({
       replyToken: event.replyToken,
@@ -494,15 +504,11 @@ ${generateWeeklySchedule(shopConfig.workingHours)}`,
 
     const pageId = updated.id;
     const order = await getOrderSummary(pageId);
-    const summaryString = createOrderSummary(order);
-
+    
     await client.replyMessage({
       replyToken: event.replyToken,
       messages: [
-        {
-          type: "text",
-          text: summaryString,
-        },
+        buildConfirmationLineMessage(order) as any,
       ],
     });
 

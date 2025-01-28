@@ -37,6 +37,12 @@ async function sendEmailConfirmation(
       from: "Acme <onboarding@resend.dev>",
       to: [shopConfig.shopEmail],
       subject: "New Order: " + order.orderNum,
+      tags: [
+        {
+          name: "category",
+          value: "order_email",
+        },
+      ],
       html: `
       <!DOCTYPE html>
         <html lang="ja">
