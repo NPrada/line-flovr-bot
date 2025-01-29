@@ -34,7 +34,8 @@ async function sendEmailConfirmation(
 ) {
   try {
     const res = await resend.emails.send({
-      from: "Acme <onboarding@resend.dev>",
+      // from: "Acme <onboarding@resend.dev>",
+      from: "Daffodii <notification@notifications.daffodii.com>",
       to: [shopConfig.shopEmail],
       subject: "New Order: " + order.orderNum,
       tags: [

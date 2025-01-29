@@ -31,8 +31,10 @@ import {
 import {
   OrderSummary,
   sendOrderConfirmation,
+  testEmail,
 } from "./src/send-confirmation.js";
 import { buildConfirmationLineMessage } from "./src/flex-messages/confirmation-message.js";
+import { buildColorSelectLineMessage } from "./src/flex-messages/color-selection-message.js";
 
 const userState: Record<
   string,
@@ -48,7 +50,12 @@ const PORT = process.env.PORT || 3000;
 
 const app: Application = express();
 
-(async () => {})();
+(async () => {
+
+  // const ord = await getOrderSummary("1888c5555d0f8117a7e8d27404118862")
+  await testEmail()
+  // console.log('order',ord)
+})();
 
 (async () => {
   // Loop over each config sequentially
@@ -329,63 +336,64 @@ ${generateWeeklySchedule(shopConfig.workingHours)}`,
     await client.replyMessage({
       replyToken: event.replyToken,
       messages: [
-        {
-          type: "template",
-          altText: "Choose an option",
-          template: {
-            type: "carousel",
-            columns: [
-              {
-                title: tsl.selectColorTitle,
-                text: tsl.selectColorText,
-                actions: [
-                  {
-                    type: "postback",
-                    label: tsl.redColor,
-                    displayText: tsl.redColor,
-                    data: `action=colorSelect&colorVal=${tsl.redColor}-red&userId=${userId}`,
-                  },
-                  {
-                    type: "postback",
-                    label: tsl.pinkColor,
-                    displayText: tsl.pinkColor,
-                    data: `action=colorSelect&colorVal=${tsl.pinkColor}-pink&userId=${userId}`,
-                  },
-                  {
-                    type: "postback",
-                    label: tsl.yellowOrangeColor,
-                    displayText: tsl.yellowOrangeColor,
-                    data: `action=colorSelect&colorVal=${tsl.yellowOrangeColor}-yellow-orange&userId=${userId}`,
-                  },
-                ],
-              },
-              {
-                title: tsl.selectColorTitle,
-                text: tsl.selectColorText,
-                actions: [
-                  {
-                    type: "postback",
-                    label: tsl.whiteColor,
-                    displayText: tsl.whiteColor,
-                    data: `action=colorSelect&colorVal=${tsl.whiteColor}-white&userId=${userId}`,
-                  },
-                  {
-                    type: "postback",
-                    label: tsl.mixedColor,
-                    displayText: tsl.mixedColor,
-                    data: `action=colorSelect&colorVal=${tsl.mixedColor}-mix&userId=${userId}`,
-                  },
-                  {
-                    type: "postback",
-                    label: "-",
-                    displayText: "-",
-                    data: `action=colorSelect&colorVal=other&userId=${userId}`,
-                  },
-                ],
-              },
-            ],
-          },
-        },
+        buildColorSelectLineMessage(userId) as any,
+        // {
+        //   type: "template",
+        //   altText: "Choose an option",
+        //   template: {
+        //     type: "carousel",
+        //     columns: [
+        //       {
+        //         title: tsl.selectColorTitle,
+        //         text: tsl.selectColorText,
+        //         actions: [
+        //           {
+        //             type: "postback",
+        //             label: tsl.redColor,
+        //             displayText: tsl.redColor,
+        //             data: `action=colorSelect&colorVal=${tsl.redColor}-red&userId=${userId}`,
+        //           },
+        //           {
+        //             type: "postback",
+        //             label: tsl.pinkColor,
+        //             displayText: tsl.pinkColor,
+        //             data: `action=colorSelect&colorVal=${tsl.pinkColor}-pink&userId=${userId}`,
+        //           },
+        //           {
+        //             type: "postback",
+        //             label: tsl.yellowOrangeColor,
+        //             displayText: tsl.yellowOrangeColor,
+        //             data: `action=colorSelect&colorVal=${tsl.yellowOrangeColor}-yellow-orange&userId=${userId}`,
+        //           },
+        //         ],
+        //       },
+        //       {
+        //         title: tsl.selectColorTitle,
+        //         text: tsl.selectColorText,
+        //         actions: [
+        //           {
+        //             type: "postback",
+        //             label: tsl.whiteColor,
+        //             displayText: tsl.whiteColor,
+        //             data: `action=colorSelect&colorVal=${tsl.whiteColor}-white&userId=${userId}`,
+        //           },
+        //           {
+        //             type: "postback",
+        //             label: tsl.mixedColor,
+        //             displayText: tsl.mixedColor,
+        //             data: `action=colorSelect&colorVal=${tsl.mixedColor}-mix&userId=${userId}`,
+        //           },
+        //           {
+        //             type: "postback",
+        //             label: "-",
+        //             displayText: "-",
+        //             data: `action=colorSelect&colorVal=other&userId=${userId}`,
+        //           },
+        //         ],
+        //       },
+        //     ],
+        //   },
+        // },
       ],
     });
   }
@@ -504,7 +512,7 @@ ${generateWeeklySchedule(shopConfig.workingHours)}`,
 
     const pageId = updated.id;
     const order = await getOrderSummary(pageId);
-    
+    console.log('order', order)
     await client.replyMessage({
       replyToken: event.replyToken,
       messages: [

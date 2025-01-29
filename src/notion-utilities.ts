@@ -21,9 +21,19 @@ export async function getOrderSummary(pageId: string): Promise<OrderSummary> {
   const color = props["Color"]?.rich_text?.[0]?.plain_text || "";
   const itemType = props["Item Type"]?.rich_text?.[0]?.plain_text || "";
   const orderNum = props["Order Num"]?.unique_id?.number || "";
-  const created_at = props["Created time"]?.date?.start || "";
+  const created_at = props["Created time"]?.created_time || "";
   const placed_at = props["Updated time"]?.date?.start || "";
-
+  // console.log('props',props)
+  console.log('created_at', created_at)
+   console.log('created_at formatted', new Date(created_at).toLocaleString("ja-JP", {
+    timeZone: "Asia/Tokyo",
+  }))
+  console.log('placed_at', placed_at)
+  console.log('placed_at formatted', new Date(placed_at).toLocaleString("ja-JP", {
+    timeZone: "Asia/Tokyo",
+  }))
+ 
+ 
   return {
     customerName,
     phoneNumber,

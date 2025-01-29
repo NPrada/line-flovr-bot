@@ -36,8 +36,6 @@ export async function initRichMenu(client: messagingApi.MessagingApiClient, chan
       ],
     });
 
-    console.log("after creating rich menu");
-
     // Step 2: Load your own image
     const imagePath = path.resolve("./images/", "rich-menu.png");
 
@@ -61,7 +59,7 @@ export async function initRichMenu(client: messagingApi.MessagingApiClient, chan
     // Step 4: Set the rich menu as the default
     await client.setDefaultRichMenu(richMenu.richMenuId);
 
-    console.log("Rich menu created with ID:", richMenu.richMenuId);
+    // console.log("Rich menu created with ID:", richMenu.richMenuId);
   } catch (error) {
     console.error('Error initializing rich menu:', error);
   }
