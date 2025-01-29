@@ -28,13 +28,10 @@ import {
   formatDateToDateString,
   isDateOutsideOfWorkingHours,
 } from "./src/utils.js";
-import {
-  OrderSummary,
-  sendOrderConfirmation,
-  testEmail,
-} from "./src/send-confirmation.js";
+import { sendOrderConfirmation } from "./src/send-confirmation.js";
 import { buildConfirmationLineMessage } from "./src/flex-messages/confirmation-message.js";
 import { buildColorSelectLineMessage } from "./src/flex-messages/color-selection-message.js";
+import { sendFaxConfirmation } from "./src/send-fax.js";
 
 const userState: Record<
   string,
@@ -50,12 +47,17 @@ const PORT = process.env.PORT || 3000;
 
 const app: Application = express();
 
-(async () => {
+if (process.env.NODE_ENV !== "production") {
+  (async () => {
+    // console.log(" process.env.NODE_ENV", process.env.NODE_ENV);
+    // const ord = await getOrderSummary("1888c5555d0f8117a7e8d27404118862");
+    // const res = await sendFaxConfirmation(ord, Object.values(SHOP_CONFIGS)[0]);
+    // console.log("res", res);
+    // await testEmail()
+    // console.log('order',ord)
+  })();
+}
 
-  // const ord = await getOrderSummary("1888c5555d0f8117a7e8d27404118862")
-  await testEmail()
-  // console.log('order',ord)
-})();
 
 (async () => {
   // Loop over each config sequentially

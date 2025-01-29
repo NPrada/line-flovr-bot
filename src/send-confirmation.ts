@@ -24,7 +24,7 @@ export async function sendOrderConfirmation(
 ) {
   await sendEmailConfirmation(order, shopConfig);
   if (shopConfig.faxNumber) {
-    // await sendFaxConfirmation(order, shopConfig);
+    await sendFaxConfirmation(order, shopConfig);
   }
 }
 

@@ -19,29 +19,34 @@ export async function sendFaxConfirmation(
   お客様が注文をしました
   =============================================
 
-  ご注文番号: ${order.orderNum}
-  注文日時: ${order.human_placed_at}
+  ご氏名: ${order.customerName}
   引き取り日時: ${order.human_date}
-  商品: ${order.itemType.split("-")[0]}
   目的: ${order.purpose.split("-")[0]}
+  商品: ${order.itemType.split("-")[0]}
   ご予算: ${order.budget}
   ご希望の色: ${order.color.split("-")[0]}
+  ご注文番号: ${order.orderNum}
+  注文日時: ${order.human_placed_at}
   電話番号: ${order.phoneNumber}
 
   =============================================
   ご不明な点がございましたら、お気軽にご連絡ください。
   `;
 
+  const pdfName = `./temp-fax-${order.orderNum}.pdf`
+
   // 2. Use pdfkit to generate a PDF from the above text
   const generatePdf = (text: string): Promise<string> => {
     return new Promise((resolve, reject) => {
       const doc = new PDFDocument();
-      const pdfPath = "./temp-fax.pdf";
+      const pdfPath = pdfName;
 
       const writeStream = fs.createWriteStream(pdfPath);
       doc.pipe(writeStream);
+      console.log(orderDetailsText);
 
-      doc.fontSize(12).text(text);
+      doc.font("./Kosugi-Regular.ttf")
+      doc.text(orderDetailsText);
 
       doc.end();
 
@@ -74,7 +79,7 @@ export async function sendFaxConfirmation(
   };
 
   // 4. Send fax via ClickSend using the uploaded file URL
-  const sendFax = async (fileUrl: string): Promise<void> => {
+  const sendFax = async (fileUrl: string) => {
     const url = "https://rest.clicksend.com/v3/fax/send";
 
     const authHeader = `Basic ${Buffer.from(
@@ -83,13 +88,14 @@ export async function sendFaxConfirmation(
 
     const payload = {
       file_url: fileUrl,
-      source: "typescript",
-      from: "",
-      to: "+12125551234",
-      // to: '+61411111111',
-      // to: shopConfig.recipientFax ?? '+61411111111', // Replace with the recipient fax number
-      // from: shopConfig.senderFax ?? '+61411111111', // Replace with your sender fax number
-      custom_string: order.orderNum, // Reference for tracking
+      messages: [
+        {
+          source: "typescript",
+          from: "",
+          to: shopConfig.faxNumber,
+          custom_string: order.orderNum, // Reference for tracking
+        },
+      ],
     };
 
     const response = await axios.post(url, payload, {
@@ -102,6 +108,7 @@ export async function sendFaxConfirmation(
     if (response.status !== 200) {
       throw new Error(`Failed to send fax: ${response.statusText}`);
     }
+    return response;
   };
 
   try {
@@ -110,18 +117,20 @@ export async function sendFaxConfirmation(
 
     // Upload PDF
     const fileUrl = await uploadPdfToClickSend(pdfPath);
-
+    
     // Send fax
-    await sendFax(fileUrl);
+    if (process.env.NODE_ENV === "production") {
+      const sendFaxRes = await sendFax(fileUrl);
+      console.log("Fax sent successfully!", sendFaxRes);
+    }
 
-    console.log('Fax sent successfully!');
   } catch (error) {
-    console.error('Error sending fax:', error);
+    console.error("Error sending fax:", error);
     throw error;
   } finally {
     // Remove the temporary PDF file
-    if (fs.existsSync('./temp-fax.pdf')) {
-      fs.unlinkSync('./temp-fax.pdf');
+    if (fs.existsSync(pdfName)) {
+      fs.unlinkSync(pdfName);
     }
   }
 }
