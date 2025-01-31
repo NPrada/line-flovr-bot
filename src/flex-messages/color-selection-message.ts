@@ -6,17 +6,17 @@ export const buildColorSelectLineMessage = (userId: string) => ({
   contents: {
     type: "bubble",
     size: 'hecto',
-    hero: {
-      type: "image",
-      url: "https://d3p3fw3rutb1if.cloudfront.net/photos/20853f34-0577-48ef-a1b4-54b5d2f36de8",
-      size: "full",
-      aspectRatio: "15:8",
-      aspectMode: "cover",
-      action: {
-        type: "uri",
-        uri: "https://line.me/",
-      },
-    },
+    // hero: {
+    //   type: "image",
+    //   url: "https://d3p3fw3rutb1if.cloudfront.net/photos/20853f34-0577-48ef-a1b4-54b5d2f36de8",
+    //   size: "full",
+    //   aspectRatio: "15:8",
+    //   aspectMode: "cover",
+    //   action: {
+    //     type: "uri",
+    //     uri: "https://line.me/",
+    //   },
+    // },
     body: {
       type: "box",
       layout: "vertical",
@@ -25,7 +25,7 @@ export const buildColorSelectLineMessage = (userId: string) => ({
           type: "text",
           text: "色味を選んでください。",
           weight: "bold",
-          size: "xl",
+          size: "md",
         },
         {
           type: "box",
