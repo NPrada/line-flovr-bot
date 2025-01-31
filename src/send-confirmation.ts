@@ -89,6 +89,10 @@ async function sendEmailConfirmation(
                 <th>ご注文番号</th>
                 <td>${order.orderNum}</td>
               </tr>
+               <tr>
+                <th>名前</th>
+                <td>${order.customerName}</td>
+              </tr>
               <tr>
                 <th>注文日時</th>
                 <td>${order.human_placed_at}</td>

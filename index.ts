@@ -50,11 +50,13 @@ const app: Application = express();
 if (process.env.NODE_ENV !== "production") {
   (async () => {
     // console.log(" process.env.NODE_ENV", process.env.NODE_ENV);
-    // const ord = await getOrderSummary("1888c5555d0f8117a7e8d27404118862");
+    // https://www.notion.so/Uea8a433ad25cf22299d71b642c45ef07-18c8c5555d0f81069cdaf67024c34f8a?pvs=4
+    const ord = await getOrderSummary("18c8c5555d0f81069cdaf67024c34f8a");
+    console.log('order',ord)
     // const res = await sendFaxConfirmation(ord, Object.values(SHOP_CONFIGS)[0]);
     // console.log("res", res);
     // await testEmail()
-    // console.log('order',ord)
+
   })();
 }
 
