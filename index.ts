@@ -222,18 +222,6 @@ ${generateWeeklySchedule(shopConfig.workingHours)}`,
     );
 
     if (!event.replyToken) return;
-    console.log('fake order', {
-      budget: '3300',
-      color: 'asdsa',
-      customerName: 'asdasd',
-      human_created_at: new Date().toISOString(),
-      human_date:  new Date().toISOString(),
-      human_placed_at:  new Date().toISOString(),
-       itemType: 'asdad',
-       orderNum: '12',
-       phoneNumber: '213123',
-       purpose: 'asdasd'
-    })
     // Now ask for the new "Item Type" question
     await client.replyMessage({
       replyToken: event.replyToken,
@@ -516,6 +504,7 @@ ${generateWeeklySchedule(shopConfig.workingHours)}`,
 
     const pageId = updated.id;
     const order = await getOrderSummary(pageId);
+    const orderPlacedAt = new Date()
     console.log('order', order)
     await client.replyMessage({
       replyToken: event.replyToken,
@@ -525,9 +514,14 @@ ${generateWeeklySchedule(shopConfig.workingHours)}`,
     });
 
     // Mark form complete in Notion
-    await updateDbRowByUserId(userId, "Updated time", new Date().toISOString());
+    await updateDbRowByUserId(userId, "Updated time", orderPlacedAt.toISOString());
     await updateDbRowByUserId(userId, "Status", "Form Complete");
-    await sendOrderConfirmation(order, shopConfig);
+    await sendOrderConfirmation({
+      ...order,
+      human_placed_at: orderPlacedAt.toLocaleString("ja-JP", {
+        timeZone: "Asia/Tokyo",
+      })
+    }, shopConfig);
     delete userState[event.source.userId]; // Clear user state
   }
 }
