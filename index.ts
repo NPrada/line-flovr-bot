@@ -38,7 +38,6 @@ const userState: Record<
   {
     awaitingBudget?: boolean;
     awaitingName?: boolean;
-    awaitingOrder?: boolean;
     awaitingPhoneNumber?: boolean;
   }
 > = {};
@@ -51,16 +50,23 @@ if (process.env.NODE_ENV !== "production") {
   (async () => {
     // console.log(" process.env.NODE_ENV", process.env.NODE_ENV);
     // https://www.notion.so/Uea8a433ad25cf22299d71b642c45ef07-18c8c5555d0f81069cdaf67024c34f8a?pvs=4
-    const ord = await getOrderSummary("18c8c5555d0f81069cdaf67024c34f8a");
-    console.log('order',ord)
-    // const res = await sendFaxConfirmation(ord, Object.values(SHOP_CONFIGS)[0]);
-    // console.log("res", res);
-    // await testEmail()
 
+    // const ord = await getOrderSummary("18c8c5555d0f81069cdaf67024c34f8a");
+    // console.log('order',ord)
+
+    // const res = await sendOrderConfirmation(ord, Object.values(SHOP_CONFIGS)[0]);
+    // console.log("res", res);
+
+    // const channelAccessToken =
+    //   Object.values(SHOP_CONFIGS)[0].channelAccessToken;
+    // const client = new messagingApi.MessagingApiClient({
+    //   channelAccessToken: channelAccessToken,
+    // });
+    // const botInfo = await client.getBotInfo();
   })();
 }
 
-
+let intialisedAllShops = false;
 (async () => {
   // Loop over each config sequentially
   for (const config of Object.values(SHOP_CONFIGS)) {
@@ -120,7 +126,22 @@ if (process.env.NODE_ENV !== "production") {
       console.error("error setting up for shop: ", config.shopId, e);
     }
   }
+  intialisedAllShops = true;
 })();
+
+app.get("/health", async (_: Request, res: Response): Promise<Response> => {
+  if (intialisedAllShops) {
+    return res.status(200).json({
+      status: "success",
+      message: "App is healthy!",
+    });
+  } else {
+    return res.status(404).json({
+      status: "success",
+      message: "App did not boot properly yet!",
+    });
+  }
+});
 
 // Register the LINE middleware.
 app.get("/", async (_: Request, res: Response): Promise<Response> => {

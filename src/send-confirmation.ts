@@ -44,6 +44,23 @@ async function sendEmailConfirmation(
           value: "order_email",
         },
       ],
+      text: `
+        お客様が注文をしました
+        =============================================
+
+        ご氏名: ${order.customerName}
+        引き取り日時: ${order.human_date}
+        目的: ${order.purpose.split("-")[0]}
+        商品: ${order.itemType.split("-")[0]}
+        ご予算: ${order.budget}
+        ご希望の色: ${order.color.split("-")[0]}
+        ご注文番号: ${order.orderNum}
+        注文日時: ${order.human_placed_at}
+        電話番号: ${order.phoneNumber}
+
+        =============================================
+        ご不明な点がございましたら、お気軽にご連絡ください。
+      `,
       html: `
       <!DOCTYPE html>
         <html lang="ja">
@@ -94,10 +111,6 @@ async function sendEmailConfirmation(
                 <td>${order.customerName}</td>
               </tr>
               <tr>
-                <th>注文日時</th>
-                <td>${order.human_placed_at}</td>
-              </tr>
-              <tr>
                 <th>引き取り日時</th>
                 <td>${order.human_date}</td>
               </tr>
@@ -120,6 +133,10 @@ async function sendEmailConfirmation(
               <tr>
                 <th>電話番号</th>
                 <td>${order.phoneNumber}</td>
+              </tr>
+              <tr>
+                <th>注文日時</th>
+                <td>${order.human_placed_at}</td>
               </tr>
             </table>
             <p>ご不明な点がございましたら、お気軽にご連絡ください。</p>
